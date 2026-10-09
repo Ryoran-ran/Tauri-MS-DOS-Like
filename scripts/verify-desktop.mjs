@@ -49,7 +49,7 @@ try {
   assert(/^https?:\/\/tauri\.localhost(?:\/|$)/.test(page.url()) || page.url().startsWith('tauri://localhost'), `Expected embedded production assets, got ${page.url()}`);
   await expect(page).toHaveTitle('RetroDOS');
   await expect(page.locator('.environment-label')).toContainText('DESKTOP');
-  await expect(log).toContainText('RetroDOS Version 0.1.0');
+  await expect(log).toContainText('RetroDOS Version 0.2.0');
   await input.fill('DIR'); await input.press('Enter');
   await expect(log).toContainText('README.TXT');
   await input.fill('CD DOCS'); await input.press('Enter');

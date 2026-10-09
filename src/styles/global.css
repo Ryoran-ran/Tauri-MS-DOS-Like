@@ -103,12 +103,14 @@ h1, h2, h3, p { margin: 0; }
 .argument-list dd { margin: 4px 0 9px; color: #9db2a4; line-height: 1.7; }
 .insert-button { width: 100%; padding: 9px; }
 .workspace { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; background: #101413; }
-.workspace-tabs { display: flex; align-items: stretch; flex-shrink: 0; height: 45px; padding: 0 26px; gap: 24px; border-bottom: 1px solid var(--line); }
-.workspace-tab { display: flex; align-items: center; gap: 7px; color: #94a69a; padding: 0 1px; border-bottom: 2px solid transparent; font-size: 11px; }
+.workspace-tabs { display: flex; align-items: stretch; flex-shrink: 0; height: 45px; padding: 0 26px; gap: 24px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--line); }
+.workspace-tab { display: flex; align-items: stretch; flex: 0 0 auto; gap: 0; color: #94a69a; border-bottom: 2px solid transparent; font-size: 11px; }
+.workspace-tab-main { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 0 1px; color: inherit; }
+.workspace-tab-main span { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-tab-close { display: grid; place-items: center; width: 25px; color: inherit; }
 .workspace-tab:hover { color: #d2e8d9; }
 .workspace-tab.active { color: var(--green); border-bottom-color: var(--green); }
-.game-exit-link { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #a4b4a9; font-size: 10px; }
-.game-exit-link:hover { color: var(--green); }
+.workspace-tab-close:hover { color: #fff; background: #8b2929; }
 .view-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 1px; margin-bottom: 25px; }
 .view-heading h1 { font-size: 25px; font-weight: 500; letter-spacing: -.8px; margin-top: 10px; }
 .heading-cursor { color: var(--green); margin-left: 7px; font-family: var(--mono); }
@@ -148,7 +150,7 @@ h1, h2, h3, p { margin: 0; }
   .terminal-heading-icon { width: 48px; height: 48px; }
 }
 @media (max-width: 440px) {
-  .title-breadcrumb, .version-tag, .game-exit-link { display: none; }
+  .title-breadcrumb, .version-tag { display: none; }
   .keyboard-hint { display: none !important; }
   .environment-label { font-size: 8px; }
   .workspace-tabs { height: 42px; }

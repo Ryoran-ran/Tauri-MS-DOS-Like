@@ -3,6 +3,8 @@ import type { DirectoryNode, FileSystemNode, FileSystemStorage } from './types';
 const PERSISTENCE_KEY = 'retrodos.virtual-text-files.v1';
 const DIRECTORY_PERSISTENCE_KEY = 'retrodos.virtual-directories.v1';
 const WORKSPACE_PERSISTENCE_KEY = 'retrodos.virtual-workspace.v2';
+const HISTORY_PERSISTENCE_KEY = 'retrodos.virtual-history.v1';
+const MAX_HISTORY_CHARACTERS = 2_000_000;
 
 export interface KeyValueStorage {
   getItem(key: string): string | null;
@@ -18,13 +20,15 @@ function defaultPersistence(): KeyValueStorage | undefined {
 }
 
 export class MemoryStorage implements FileSystemStorage {
-  private readonly root: DirectoryNode;
+  private root: DirectoryNode;
   private readonly persistence: KeyValueStorage | undefined;
+  private history: DirectoryNode[];
 
   constructor(root: DirectoryNode, persistence: KeyValueStorage | undefined = defaultPersistence()) {
     this.persistence = persistence;
     const snapshot = this.readWorkspaceSnapshot();
     this.root = snapshot ? structuredClone(snapshot) : structuredClone(root);
+    this.history = this.readHistory();
     if (!snapshot) {
       for (const path of this.readPersistedDirectories().sort((left, right) => left.length - right.length)) {
         try { this.createDirectoryInMemory(path); } catch { /* Ignore stale or invalid saved paths. */ }
@@ -34,6 +38,7 @@ export class MemoryStorage implements FileSystemStorage {
         try { this.writeInMemory(path, content); } catch { /* Ignore stale or invalid saved paths. */ }
       }
     }
+    normalizeMetadata(this.root);
   }
 
   private findNode(absolutePath: string): FileSystemNode | undefined {
@@ -67,7 +72,24 @@ export class MemoryStorage implements FileSystemStorage {
   }
 
   private persistWorkspace(): void {
-    this.persistence?.setItem(WORKSPACE_PERSISTENCE_KEY, JSON.stringify(this.root));
+    if (!this.persistence) return;
+    this.persistence.setItem(WORKSPACE_PERSISTENCE_KEY, JSON.stringify(this.root));
+    this.persistence.setItem(HISTORY_PERSISTENCE_KEY, JSON.stringify(this.history));
+  }
+
+  private readHistory(): DirectoryNode[] {
+    if (!this.persistence) return [];
+    try {
+      const parsed: unknown = JSON.parse(this.persistence.getItem(HISTORY_PERSISTENCE_KEY) ?? '[]');
+      return Array.isArray(parsed) ? parsed.filter(isDirectoryNode).slice(-20) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private recordHistory(): void {
+    this.history = [...this.history.slice(-19), structuredClone(this.root)];
+    while (this.history.length > 1 && JSON.stringify(this.history).length > MAX_HISTORY_CHARACTERS) this.history.shift();
   }
 
   async getNode(absolutePath: string): Promise<FileSystemNode | undefined> {
@@ -85,7 +107,9 @@ export class MemoryStorage implements FileSystemStorage {
 
   private createDirectoryInMemory(absolutePath: string): void {
     const { parent, name } = this.getDirectoryTarget(absolutePath);
-    parent.children.push({ kind: 'directory', name, children: [] });
+    const timestamp = new Date().toISOString();
+    parent.children.push({ kind: 'directory', name, children: [], createdAt: timestamp, updatedAt: timestamp });
+    parent.updatedAt = timestamp;
   }
 
   private readPersistedDirectories(): string[] {
@@ -100,6 +124,7 @@ export class MemoryStorage implements FileSystemStorage {
 
   async createDirectory(absolutePath: string): Promise<void> {
     this.getDirectoryTarget(absolutePath);
+    this.recordHistory();
     this.createDirectoryInMemory(absolutePath);
     this.persistWorkspace();
   }
@@ -118,8 +143,15 @@ export class MemoryStorage implements FileSystemStorage {
 
   private writeInMemory(absolutePath: string, content: string): void {
     const { parent, existing, name } = this.getWriteTarget(absolutePath);
-    if (existing) existing.content = content;
-    else parent.children.push({ kind: 'file', name, content });
+    const timestamp = new Date().toISOString();
+    if (existing) {
+      existing.content = content;
+      existing.createdAt ??= timestamp;
+      existing.updatedAt = timestamp;
+    } else {
+      parent.children.push({ kind: 'file', name, content, createdAt: timestamp, updatedAt: timestamp });
+    }
+    parent.updatedAt = timestamp;
   }
 
   private readPersistedFiles(): Record<string, string> {
@@ -134,15 +166,28 @@ export class MemoryStorage implements FileSystemStorage {
 
   async writeTextFile(absolutePath: string, content: string): Promise<void> {
     this.getWriteTarget(absolutePath);
+    this.recordHistory();
     this.writeInMemory(absolutePath, content);
     this.persistWorkspace();
   }
 
   async deleteNode(absolutePath: string): Promise<void> {
-    const { parent, name } = this.getParentTarget(absolutePath);
-    const index = parent.children.findIndex(child => child.name.toUpperCase() === name.toUpperCase());
-    if (index === -1) throw new Error(`パスが見つかりません: ${absolutePath}`);
-    parent.children.splice(index, 1);
+    await this.deleteNodes([absolutePath]);
+  }
+
+  async deleteNodes(absolutePaths: string[]): Promise<void> {
+    const targets = absolutePaths.map(absolutePath => {
+      const { parent, name } = this.getParentTarget(absolutePath);
+      const index = parent.children.findIndex(child => child.name.toUpperCase() === name.toUpperCase());
+      if (index === -1) throw new Error(`パスが見つかりません: ${absolutePath}`);
+      return { parent, name };
+    });
+    this.recordHistory();
+    for (const { parent, name } of targets) {
+      const index = parent.children.findIndex(child => child.name.toUpperCase() === name.toUpperCase());
+      if (index !== -1) parent.children.splice(index, 1);
+      parent.updatedAt = new Date().toISOString();
+    }
     this.persistWorkspace();
   }
 
@@ -153,7 +198,11 @@ export class MemoryStorage implements FileSystemStorage {
     if (parent.children.some(child => child.name.toUpperCase() === name.toUpperCase())) {
       throw new Error(`既に存在します: ${destinationPath}`);
     }
-    parent.children.push({ ...structuredClone(source), name });
+    this.recordHistory();
+    const copy = { ...structuredClone(source), name };
+    refreshMetadata(copy);
+    parent.children.push(copy);
+    parent.updatedAt = new Date().toISOString();
     this.persistWorkspace();
   }
 
@@ -165,24 +214,61 @@ export class MemoryStorage implements FileSystemStorage {
     if (destinationTarget.parent.children.some(child => child.name.toUpperCase() === destinationTarget.name.toUpperCase())) {
       throw new Error(`既に存在します: ${destinationPath}`);
     }
+    this.recordHistory();
     const [node] = sourceTarget.parent.children.splice(sourceIndex, 1);
     if (!node) throw new Error(`移動元が見つかりません: ${sourcePath}`);
     node.name = destinationTarget.name;
+    node.updatedAt = new Date().toISOString();
     destinationTarget.parent.children.push(node);
+    sourceTarget.parent.updatedAt = node.updatedAt;
+    destinationTarget.parent.updatedAt = node.updatedAt;
     this.persistWorkspace();
+  }
+
+  async replaceRoot(root: DirectoryNode): Promise<void> {
+    this.recordHistory();
+    this.root = structuredClone(root);
+    normalizeMetadata(this.root);
+    this.persistWorkspace();
+  }
+
+  async undo(): Promise<boolean> {
+    const previous = this.history.pop();
+    if (!previous) return false;
+    this.root = structuredClone(previous);
+    normalizeMetadata(this.root);
+    this.persistWorkspace();
+    return true;
   }
 }
 
-function isFileSystemNode(value: unknown): value is FileSystemNode {
+function isFileSystemNode(value: unknown, root = false): value is FileSystemNode {
   if (!value || typeof value !== 'object') return false;
   const node = value as Partial<FileSystemNode>;
-  if (node.kind === 'file') return typeof node.name === 'string' && typeof node.content === 'string';
+  if (typeof node.name !== 'string' || (!root && !isValidNodeName(node.name))) return false;
+  if (node.kind === 'file') return typeof node.content === 'string';
   return node.kind === 'directory'
-    && typeof node.name === 'string'
     && Array.isArray(node.children)
-    && node.children.every(isFileSystemNode);
+    && node.children.every(child => isFileSystemNode(child))
+    && new Set(node.children.map(child => child.name.toUpperCase())).size === node.children.length;
 }
 
-function isDirectoryNode(value: unknown): value is DirectoryNode {
-  return isFileSystemNode(value) && value.kind === 'directory' && value.name === 'C:';
+export function isDirectoryNode(value: unknown): value is DirectoryNode {
+  return isFileSystemNode(value, true) && value.kind === 'directory' && value.name === 'C:';
+}
+
+function isValidNodeName(name: string): boolean {
+  return Boolean(name) && name !== '.' && name !== '..' && !/[\\/:*?"<>|\0]/.test(name);
+}
+
+function normalizeMetadata(node: FileSystemNode, fallback = new Date().toISOString()): void {
+  node.createdAt ??= fallback;
+  node.updatedAt ??= node.createdAt;
+  if (node.kind === 'directory') node.children.forEach(child => normalizeMetadata(child, fallback));
+}
+
+function refreshMetadata(node: FileSystemNode, timestamp = new Date().toISOString()): void {
+  node.createdAt = timestamp;
+  node.updatedAt = timestamp;
+  if (node.kind === 'directory') node.children.forEach(child => refreshMetadata(child, timestamp));
 }

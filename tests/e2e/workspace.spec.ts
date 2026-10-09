@@ -13,7 +13,7 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const log = page.getByRole('log');
-  await expect(log).toContainText('RetroDOS Version 0.1.0');
+  await expect(log).toContainText('RetroDOS Version 0.2.0');
   await commandInput(page).evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(commandInput(page)).toBeFocused();
@@ -49,7 +49,7 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
 test('search, details and insertion do not execute automatically', async ({ page }) => {
   const search = page.getByRole('textbox', { name: 'コマンドを検索' });
   await search.fill('ディレクトリ');
-  await expect(page.locator('.command-item')).toHaveCount(3);
+  await expect(page.locator('.command-item')).toHaveCount(4);
   await search.fill('tYpE');
   await page.locator('.command-item').click();
   const details = page.getByRole('region', { name: 'TYPEの詳細' });
@@ -64,7 +64,7 @@ test('search, details and insertion do not execute automatically', async ({ page
   await search.fill('no-results');
   await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
   await search.fill('');
-  await expect(page.locator('.command-item')).toHaveCount(18);
+  await expect(page.locator('.command-item')).toHaveCount(26);
 });
 
 test('file operations support copy, rename, move and deletion', async ({ page }) => {
@@ -88,6 +88,55 @@ test('file operations support copy, rename, move and deletion', async ({ page })
   await run(page, 'RMDIR WORK');
   await run(page, 'DIR');
   await expect(page.getByRole('log').locator('.terminal-entry.output').filter({ hasText: '<DIR>        WORK' })).toHaveCount(0);
+});
+
+test('v0.2 commands support discovery, paging, wildcard undo and drive transfer', async ({ page }) => {
+  const log = page.getByRole('log');
+  await run(page, 'PWD');
+  await expect(log).toContainText('C:\\');
+  await run(page, 'TREE DOCS');
+  await expect(log).toContainText('COMMANDS.TXT');
+  await run(page, 'FIND RetroDOS');
+  await expect(log).toContainText('検索結果:');
+  await run(page, 'STAT README.TXT');
+  await expect(log).toContainText('Modified');
+
+  await run(page, 'MORE DOCS\\COMMANDS.TXT');
+  const pager = page.getByRole('region', { name: 'MOREページャー' });
+  await expect(pager).toBeVisible();
+  await expect(pager).toContainText('RetroDOS v0.2 コマンドガイド');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Escape');
+  await expect(commandInput(page)).toBeFocused();
+
+  await run(page, 'COPY README.TXT TEMP-A.TXT');
+  await run(page, 'COPY README.TXT TEMP-B.TXT');
+  await run(page, 'DEL TEMP-*.TXT');
+  await expect(log).toContainText('2 ファイルを削除しました');
+  await run(page, 'UNDO');
+  await run(page, 'TYPE TEMP-A.TXT');
+  await expect(log).toContainText('Welcome to RetroDOS.');
+
+  const downloadPromise = page.waitForEvent('download');
+  await run(page, 'EXPORT TEST-DRIVE.JSON');
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('TEST-DRIVE.JSON');
+
+  await run(page, 'IMPORT');
+  const importView = page.getByRole('region', { name: '仮想ドライブ取り込み' });
+  await expect(importView).toBeVisible();
+  const archive = JSON.stringify({
+    format: 'retrodos-drive', version: 1, exportedAt: new Date().toISOString(),
+    root: { kind: 'directory', name: 'C:', children: [{ kind: 'file', name: 'IMPORTED.TXT', content: 'import succeeded' }] },
+  });
+  await importView.getByLabel('IMPORT FILE').setInputFiles({ name: 'drive.json', mimeType: 'application/json', buffer: Buffer.from(archive) });
+  await importView.getByRole('button', { name: 'インポート実行' }).click();
+  await expect(commandInput(page)).toBeFocused();
+  await run(page, 'TYPE IMPORTED.TXT');
+  await expect(log).toContainText('import succeeded');
+  await page.reload();
+  await run(page, 'TYPE IMPORTED.TXT');
+  await expect(page.getByRole('log')).toContainText('import succeeded');
 });
 
 test('Vim editor supports modal keyboard editing, saving and quitting', async ({ page }) => {
@@ -128,6 +177,64 @@ test('Vim editor supports modal keyboard editing, saving and quitting', async ({
   await page.reload();
   await run(page, 'TYPE NOTES.TXT');
   await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
+});
+
+test('task tabs show only open apps and keep background tasks available', async ({ page }) => {
+  const tabs = page.locator('.workspace-tabs');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
+  await expect(tabs.locator('.workspace-tab-main')).toHaveText(['ターミナル']);
+
+  await run(page, 'VIM TASK.TXT');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await expect(tabs.locator('.workspace-tab').nth(1)).toContainText('TASK.TXT');
+  const editor = page.locator('.vim-editor');
+  await editor.press('i');
+  await editor.type('unsaved task');
+  await editor.press('Escape');
+  await tabs.locator('.workspace-tab').nth(1).locator('.workspace-tab-close').click();
+  await expect(page.getByRole('alert')).toContainText('E37');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await editor.press('Shift+;');
+  await page.locator('.vim-command-line input').fill('q!');
+  await page.locator('.vim-command-line input').press('Enter');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
+
+  await run(page, 'GAMES');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await page.locator('.game-card .button.primary').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(3);
+  await expect(tabs.locator('.workspace-tab').nth(2)).toContainText('GUESS');
+  const gameInput = page.locator('.guess-form input');
+  await gameInput.fill('101');
+  await gameInput.press('Enter');
+  await expect(page.locator('.game-view .form-error')).toBeVisible();
+
+  await page.keyboard.press('Control+Shift+Tab');
+  await expect(page.locator('.library-view')).toBeVisible();
+  await page.keyboard.press('Control+Tab');
+  await expect(page.locator('.game-view')).toBeVisible();
+
+  const gameTab = tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-main');
+  await gameTab.focus();
+  await gameTab.press('Home');
+  const terminalTab = tabs.locator('.workspace-tab-main').first();
+  await expect(terminalTab).toHaveAttribute('aria-selected', 'true');
+  await expect(terminalTab).toBeFocused();
+  await terminalTab.press('End');
+  await expect(page.locator('.game-view')).toBeVisible();
+  await expect(gameTab).toBeFocused();
+
+  await tabs.locator('.workspace-tab-main').first().click();
+  await expect(commandInput(page)).toBeFocused();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(3);
+  await tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-main').click();
+  await expect(gameInput).toHaveValue('101');
+  await expect(page.locator('.game-view .form-error')).toBeVisible();
+  await tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-close').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await expect(commandInput(page)).toBeFocused();
+  await tabs.locator('.workspace-tab').nth(1).locator('.workspace-tab-close').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
 });
 
 test('history restores drafts, completion supports keyboard and Escape', async ({ page }) => {
@@ -185,7 +292,7 @@ test('library, GUESS validation, win, replay and exit', async ({ page }) => {
   await expect(page.locator('.execution-status')).toHaveText('READY');
   await run(page, 'RUN GUESS');
   await expect(game).toBeVisible();
-  await page.getByRole('button', { name: 'ゲームを終了', exact: true }).click();
+  await page.locator('.workspace-tab').filter({ hasText: 'GUESS' }).locator('.workspace-tab-close').click();
   await expect(commandInput(page)).toBeFocused();
 });
 

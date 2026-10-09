@@ -16,6 +16,8 @@ export interface CommandResult {
   activeView?: ActiveView;
   activeGame?: string;
   activeDocument?: string;
+  pager?: { path: string; content: string };
+  download?: { fileName: string; content: string; mimeType: string };
 }
 export interface CommandContext {
   currentDirectory: string;

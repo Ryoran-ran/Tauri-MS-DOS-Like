@@ -4,6 +4,7 @@ import type { TerminalEntry } from '../../types/workspace';
 import type { useCommandInput } from '../../hooks/useCommandInput';
 
 interface Props {
+  active: boolean;
   entries: readonly TerminalEntry[];
   directory: string;
   busy: boolean;
@@ -11,13 +12,13 @@ interface Props {
   onInsert: (text: string) => void;
 }
 
-export function Terminal({ entries, directory, busy, input, onInsert }: Props) {
+export function Terminal({ active, entries, directory, busy, input, onInsert }: Props) {
   const logRef = useRef<HTMLDivElement>(null);
   const followOutput = useRef(true);
   const [unread, setUnread] = useState(false);
 
-  useEffect(() => { input.focusInput(); }, [input.focusInput]);
-  useEffect(() => { if (!busy) input.focusInput(); }, [busy, input.focusInput]);
+  useEffect(() => { if (active) input.focusInput(); }, [active, input.focusInput]);
+  useEffect(() => { if (active && !busy) input.focusInput(); }, [active, busy, input.focusInput]);
   useLayoutEffect(() => {
     const log = logRef.current;
     if (!log) return;
@@ -33,7 +34,7 @@ export function Terminal({ entries, directory, busy, input, onInsert }: Props) {
   };
 
   return (
-    <section className="terminal-view" aria-label="ターミナル画面">
+    <section className="terminal-view" aria-label="ターミナル画面" hidden={!active}>
       <h1 className="sr-only">ターミナル</h1>
       <div className="terminal-panel">
         <div className="terminal-panel-header"><span><TerminalIcon size={14} />CONSOLE</span><span className="panel-path" title={directory}>{directory}</span></div>

@@ -16,8 +16,10 @@ export function useWorkspace() {
     { id: 2, kind: 'system', text: '準備完了。コマンドを入力して、はじめましょう。' },
   ]);
   const [activeView, setActiveView] = useState<ActiveView>('terminal');
+  const [openViews, setOpenViews] = useState<ActiveView[]>(['terminal']);
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [activeDocument, setActiveDocument] = useState('C:\\MEMO.TXT');
+  const [pager, setPager] = useState<{ path: string; content: string } | null>(null);
   const [status, setStatus] = useState<ExecutionStatus>('READY');
   const [busy, setBusy] = useState(false);
 
@@ -34,9 +36,14 @@ export function useWorkspace() {
       const newEntries = result.output.map(text => ({ id: nextId.current++, kind: result.error ? 'error' as const : 'output' as const, text }));
       setTerminalEntries(entries => result.clearTerminal ? newEntries : [...entries, ...newEntries]);
       if (result.currentDirectory !== undefined) setCurrentDirectory(result.currentDirectory);
-      if (result.activeView) setActiveView(result.activeView);
+      if (result.activeView) {
+        setOpenViews(views => views.includes(result.activeView!) ? views : [...views, result.activeView!]);
+        setActiveView(result.activeView);
+      }
       if (result.activeGame) setActiveGame(result.activeGame);
       if (result.activeDocument) setActiveDocument(result.activeDocument);
+      if (result.pager) setPager(result.pager);
+      if (result.download) downloadFile(result.download.fileName, result.download.content, result.download.mimeType);
       setStatus(result.error ? 'ERROR' : result.activeGame ? 'RUNNING' : 'READY');
     } finally {
       executing.current = false;
@@ -44,17 +51,53 @@ export function useWorkspace() {
     }
   }, [currentDirectory, fileSystem]);
 
+  const importDrive = useCallback(async (data: string): Promise<string | null> => {
+    setBusy(true);
+    setStatus('RUNNING');
+    try {
+      await fileSystem.importData(data);
+      setCurrentDirectory('C:\\');
+      setOpenViews(views => views.filter(view => view !== 'import'));
+      setActiveView('terminal');
+      setStatus('READY');
+      setTerminalEntries(entries => [...entries, { id: nextId.current++, kind: 'system', text: '仮想ドライブを取り込みました。C:\\ へ戻ります。' }]);
+      return null;
+    } catch (error: unknown) {
+      setStatus('ERROR');
+      return error instanceof Error ? error.message : 'ドライブを取り込めませんでした。';
+    } finally {
+      setBusy(false);
+    }
+  }, [fileSystem]);
+
   const exitGame = useCallback(() => {
     setActiveGame(null);
+    setOpenViews(views => views.filter(view => view !== 'game'));
     setActiveView('terminal');
     setStatus('READY');
     setTerminalEntries(entries => [...entries, { id: nextId.current++, kind: 'system', text: 'ゲームを終了しました。ターミナルへ戻ります。' }]);
   }, []);
 
-  const navigate = useCallback((view: 'terminal' | 'vim' | 'game-library') => {
-    if (activeGame) exitGame();
+  const navigate = useCallback((view: ActiveView) => {
+    setOpenViews(views => views.includes(view) ? views : [...views, view]);
     setActiveView(view);
-  }, [activeGame, exitGame]);
+  }, []);
 
-  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, activeGame, activeDocument, status, busy, runCommand, exitGame, navigate };
+  const closeView = useCallback((view: Exclude<ActiveView, 'terminal'>) => {
+    setOpenViews(views => views.filter(openView => openView !== view));
+    setActiveView(current => current === view ? 'terminal' : current);
+  }, []);
+
+  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, runCommand, importDrive, exitGame, navigate, closeView };
+}
+
+function downloadFile(fileName: string, content: string, mimeType: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
