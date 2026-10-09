@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface Props {
+  active: boolean;
   onImport: (data: string) => Promise<string | null>;
   onExit: () => void;
 }
 
-export function DriveImport({ onImport, onExit }: Props) {
+export function DriveImport({ active, onImport, onExit }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [data, setData] = useState('');
@@ -13,13 +14,14 @@ export function DriveImport({ onImport, onExit }: Props) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!active) return;
     requestAnimationFrame(() => inputRef.current?.focus());
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) { event.preventDefault(); onExit(); }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [busy, onExit]);
+  }, [active, busy, onExit]);
 
   const selectFile = async (file?: File) => {
     setError('');
@@ -40,7 +42,7 @@ export function DriveImport({ onImport, onExit }: Props) {
   };
 
   return (
-    <section className="import-view" aria-label="仮想ドライブ取り込み">
+    <section className="import-view" aria-label="仮想ドライブ取り込み" hidden={!active}>
       <div className="import-window">
         <header className="import-titlebar">RETRODOS DRIVE IMPORT</header>
         <div className="import-body">

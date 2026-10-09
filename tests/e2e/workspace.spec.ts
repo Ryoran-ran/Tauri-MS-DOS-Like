@@ -179,6 +179,49 @@ test('Vim editor supports modal keyboard editing, saving and quitting', async ({
   await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
 });
 
+test('task tabs show only open apps and keep background tasks available', async ({ page }) => {
+  const tabs = page.locator('.workspace-tabs');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
+  await expect(tabs.locator('.workspace-tab-main')).toHaveText(['ターミナル']);
+
+  await run(page, 'VIM TASK.TXT');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await expect(tabs.locator('.workspace-tab').nth(1)).toContainText('TASK.TXT');
+  const editor = page.locator('.vim-editor');
+  await editor.press('i');
+  await editor.type('unsaved task');
+  await editor.press('Escape');
+  await tabs.locator('.workspace-tab').nth(1).locator('.workspace-tab-close').click();
+  await expect(page.getByRole('alert')).toContainText('E37');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await editor.press('Shift+;');
+  await page.locator('.vim-command-line input').fill('q!');
+  await page.locator('.vim-command-line input').press('Enter');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
+
+  await run(page, 'GAMES');
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await page.locator('.game-card .button.primary').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(3);
+  await expect(tabs.locator('.workspace-tab').nth(2)).toContainText('GUESS');
+  const gameInput = page.locator('.guess-form input');
+  await gameInput.fill('101');
+  await gameInput.press('Enter');
+  await expect(page.locator('.game-view .form-error')).toBeVisible();
+
+  await tabs.locator('.workspace-tab-main').first().click();
+  await expect(commandInput(page)).toBeFocused();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(3);
+  await tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-main').click();
+  await expect(gameInput).toHaveValue('101');
+  await expect(page.locator('.game-view .form-error')).toBeVisible();
+  await tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-close').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(2);
+  await expect(commandInput(page)).toBeFocused();
+  await tabs.locator('.workspace-tab').nth(1).locator('.workspace-tab-close').click();
+  await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
+});
+
 test('history restores drafts, completion supports keyboard and Escape', async ({ page }) => {
   const input = commandInput(page);
   await run(page, 'ECHO first');
@@ -234,7 +277,7 @@ test('library, GUESS validation, win, replay and exit', async ({ page }) => {
   await expect(page.locator('.execution-status')).toHaveText('READY');
   await run(page, 'RUN GUESS');
   await expect(game).toBeVisible();
-  await page.getByRole('button', { name: 'ゲームを終了', exact: true }).click();
+  await page.locator('.workspace-tab').filter({ hasText: 'GUESS' }).locator('.workspace-tab-close').click();
   await expect(commandInput(page)).toBeFocused();
 });
 

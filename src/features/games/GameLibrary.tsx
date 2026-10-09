@@ -5,18 +5,19 @@ import { gameCatalog } from './catalog';
 import { moveGameSelection, resolveGameSelection } from './selection';
 
 interface Props {
+  active: boolean;
   onLaunch: (name: string) => void;
   onBack: () => void;
 }
 
-export function GameLibrary({ onLaunch, onBack }: Props) {
+export function GameLibrary({ active, onLaunch, onBack }: Props) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState('');
   const selectorRef = useRef<HTMLInputElement>(null);
   const cardRefs = useRef<Array<HTMLElement | null>>([]);
 
-  useEffect(() => { selectorRef.current?.focus(); }, []);
+  useEffect(() => { if (active) selectorRef.current?.focus(); }, [active]);
 
   const launch = (index: number) => {
     const game = gameCatalog[index];
@@ -75,7 +76,7 @@ export function GameLibrary({ onLaunch, onBack }: Props) {
   };
 
   return (
-    <section className="library-view" aria-label="ゲームライブラリ画面">
+    <section className="library-view" aria-label="ゲームライブラリ画面" hidden={!active}>
       <h1 className="sr-only">ゲームライブラリ</h1>
 
       <div className="library-selector-panel">

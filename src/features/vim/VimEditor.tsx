@@ -8,15 +8,17 @@ interface Props {
   active: boolean;
   path: string;
   fileSystem: FileSystem;
+  closeRequest: number;
   onExit: () => void;
 }
 
-export function VimEditor({ active, path, fileSystem, onExit }: Props) {
+export function VimEditor({ active, path, fileSystem, closeRequest, onExit }: Props) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const commandRef = useRef<HTMLInputElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const undoStack = useRef<string[]>([]);
   const pendingOperatorRef = useRef('');
+  const handledCloseRequest = useRef(closeRequest);
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [mode, setMode] = useState<VimMode>('NORMAL');
@@ -92,6 +94,17 @@ export function VimEditor({ active, path, fileSystem, onExit }: Props) {
       else editorRef.current?.focus();
     });
   }, [active, loading, mode]);
+
+  useEffect(() => {
+    if (closeRequest === handledCloseRequest.current) return;
+    handledCloseRequest.current = closeRequest;
+    setMode('NORMAL');
+    setPendingOperator('');
+    if (dirty) {
+      setMessage('E37: 保存されていません（:wq で保存、:q! で破棄）');
+      requestAnimationFrame(() => editorRef.current?.focus());
+    } else onExit();
+  }, [closeRequest, dirty, onExit, setPendingOperator]);
 
   const save = useCallback(async (): Promise<boolean> => {
     if (loadError) {

@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { compareGuess, createSecret } from './guessLogic';
 import type { GuessResult } from './guessLogic';
 
-export interface GameProps { onExit: () => void }
+export interface GameProps { active: boolean; onExit: () => void }
 interface Attempt { value: number; result: GuessResult }
 
-export function GuessGame({ onExit }: GameProps) {
+export function GuessGame({ active, onExit }: GameProps) {
   const [secret, setSecret] = useState(createSecret);
   const [guess, setGuess] = useState('');
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -17,7 +17,7 @@ export function GuessGame({ onExit }: GameProps) {
   const low = Math.max(1, ...attempts.filter(attempt => attempt.result === 'higher').map(attempt => attempt.value + 1));
   const high = Math.min(100, ...attempts.filter(attempt => attempt.result === 'lower').map(attempt => attempt.value - 1));
 
-  useEffect(() => { inputRef.current?.focus(); }, [secret]);
+  useEffect(() => { if (active) inputRef.current?.focus(); }, [active, secret]);
 
   const reset = () => {
     setSecret(createSecret()); setAttempts([]); setGuess(''); setError('');
@@ -31,7 +31,7 @@ export function GuessGame({ onExit }: GameProps) {
   };
 
   return (
-    <section className="game-view" aria-label="GUESS 数当てゲーム">
+    <section className="game-view" aria-label="GUESS 数当てゲーム" hidden={!active}>
       <div className="game-topline"><button className="text-button" onClick={onExit}><ArrowLeft size={15} />ターミナルへ戻る</button><span className="game-type">BUILT-IN GAME</span></div>
       <div className="guess-game">
         <span className={`game-symbol ${won ? 'won' : ''}`}>{won ? <Trophy size={32} /> : <Target size={32} />}</span>

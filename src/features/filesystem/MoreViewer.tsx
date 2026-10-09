@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface Props {
+  active: boolean;
   path: string;
   content: string;
   onExit: () => void;
 }
 
-export function MoreViewer({ path, content, onExit }: Props) {
+export function MoreViewer({ active, path, content, onExit }: Props) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const lines = useMemo(() => content.split('\n'), [content]);
   const [offset, setOffset] = useState(0);
@@ -16,8 +17,11 @@ export function MoreViewer({ path, content, onExit }: Props) {
 
   useEffect(() => {
     setOffset(0);
-    requestAnimationFrame(() => viewerRef.current?.focus());
   }, [path]);
+
+  useEffect(() => {
+    if (active) requestAnimationFrame(() => viewerRef.current?.focus());
+  }, [active, path]);
 
   useEffect(() => {
     const element = viewerRef.current;
@@ -31,6 +35,7 @@ export function MoreViewer({ path, content, onExit }: Props) {
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'q' || event.key === 'Escape') {
         event.preventDefault();
@@ -57,10 +62,10 @@ export function MoreViewer({ path, content, onExit }: Props) {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [maxOffset, onExit, pageSize]);
+  }, [active, maxOffset, onExit, pageSize]);
 
   return (
-    <section className="more-view" aria-label="MOREページャー">
+    <section className="more-view" aria-label="MOREページャー" hidden={!active}>
       <header className="more-titlebar"><span>MORE</span><span>{path}</span></header>
       <div ref={viewerRef} className="more-content" tabIndex={0} aria-label={`${path}の内容`}>
         {lines.slice(offset, offset + pageSize).map((line, index) => <div key={offset + index}>{line || '\u00a0'}</div>)}
