@@ -1,4 +1,6 @@
 import { BookOpenText, FileInput, FileText, Gamepad2, Library, Terminal, X } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { ActiveView } from '../../types/workspace';
 
 interface Props {
@@ -12,14 +14,42 @@ interface Props {
 }
 
 export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath, activeGame, onNavigate, onClose }: Props) {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    const index = openViews.indexOf(activeView);
+    tabRefs.current[index]?.closest('.workspace-tab')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activeView, openViews]);
+
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (index + 1) % openViews.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (index - 1 + openViews.length) % openViews.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = openViews.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    onNavigate(openViews[nextIndex]!);
+    requestAnimationFrame(() => requestAnimationFrame(() => tabRefs.current[nextIndex]?.focus()));
+  };
+
   return (
-    <nav className="workspace-tabs" aria-label="実行中のアプリ">
-      {openViews.map(view => {
+    <nav className="workspace-tabs" aria-label="実行中のアプリ" role="tablist" title="Ctrl+Tab: 次のタブ / Ctrl+Shift+Tab: 前のタブ">
+      {openViews.map((view, index) => {
         const tab = getTab(view, activeDocument, pagerPath, activeGame);
         const Icon = tab.icon;
         return (
           <div key={view} className={`workspace-tab ${activeView === view ? 'active' : ''}`}>
-            <button className="workspace-tab-main" aria-current={activeView === view ? 'page' : undefined} title={tab.title} onClick={() => onNavigate(view)}>
+            <button
+              ref={element => { tabRefs.current[index] = element; }}
+              className="workspace-tab-main"
+              role="tab"
+              aria-selected={activeView === view}
+              tabIndex={activeView === view ? 0 : -1}
+              title={tab.title}
+              onClick={() => onNavigate(view)}
+              onKeyDown={event => handleTabKeyDown(event, index)}
+            >
               <Icon size={15} />
               <span>{tab.label}</span>
             </button>

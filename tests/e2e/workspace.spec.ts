@@ -209,6 +209,21 @@ test('task tabs show only open apps and keep background tasks available', async 
   await gameInput.press('Enter');
   await expect(page.locator('.game-view .form-error')).toBeVisible();
 
+  await page.keyboard.press('Control+Shift+Tab');
+  await expect(page.locator('.library-view')).toBeVisible();
+  await page.keyboard.press('Control+Tab');
+  await expect(page.locator('.game-view')).toBeVisible();
+
+  const gameTab = tabs.locator('.workspace-tab').nth(2).locator('.workspace-tab-main');
+  await gameTab.focus();
+  await gameTab.press('Home');
+  const terminalTab = tabs.locator('.workspace-tab-main').first();
+  await expect(terminalTab).toHaveAttribute('aria-selected', 'true');
+  await expect(terminalTab).toBeFocused();
+  await terminalTab.press('End');
+  await expect(page.locator('.game-view')).toBeVisible();
+  await expect(gameTab).toBeFocused();
+
   await tabs.locator('.workspace-tab-main').first().click();
   await expect(commandInput(page)).toBeFocused();
   await expect(tabs.locator('.workspace-tab')).toHaveCount(3);

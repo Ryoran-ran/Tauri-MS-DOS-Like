@@ -61,11 +61,19 @@ export function App() {
   const closeImport = useCallback(() => closeView('import'), [closeView]);
   const closeGameLibrary = useCallback(() => closeView('game-library'), [closeView]);
   const launchGame = useCallback((name: string) => { void runCommand(`RUN ${name}`); }, [runCommand]);
+  const switchTab = useCallback((step: -1 | 1) => {
+    const currentIndex = workspace.openViews.indexOf(activeView);
+    const nextIndex = (currentIndex + step + workspace.openViews.length) % workspace.openViews.length;
+    navigate(workspace.openViews[nextIndex]!);
+  }, [activeView, navigate, workspace.openViews]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.isComposing) return;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Tab') {
+        event.preventDefault();
+        switchTab(event.shiftKey ? -1 : 1);
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setSidebarOpen(true);
         requestAnimationFrame(() => searchRef.current?.focus());
@@ -84,7 +92,7 @@ export function App() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [activeView, runCommand, toggleSidebar]);
+  }, [activeView, runCommand, switchTab, toggleSidebar]);
 
   return (
     <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
