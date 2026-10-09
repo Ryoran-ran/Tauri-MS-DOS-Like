@@ -91,6 +91,46 @@ describe('virtual filesystem', () => {
     await expect(fs.deleteFile('DOCS', 'C:\\')).rejects.toThrow('ファイルではありません');
     await expect(fs.removeDirectory('C:\\', 'C:\\', true)).rejects.toThrow('ルートディレクトリ');
   });
+  it('deletes wildcard matches as one undoable operation', async () => {
+    const fs = createFileSystem();
+    await fs.writeTextFile('ONE.TXT', 'C:\\', 'one');
+    await fs.writeTextFile('TWO.TXT', 'C:\\', 'two');
+    await fs.writeTextFile('KEEP.LOG', 'C:\\', 'keep');
+    expect(await fs.deleteFiles('*.TXT', 'C:\\')).toEqual(['C:\\README.TXT', 'C:\\ONE.TXT', 'C:\\TWO.TXT']);
+    await expect(fs.readTextFile('ONE.TXT', 'C:\\')).rejects.toThrow('ファイルが見つかりません');
+    expect(await fs.undo()).toBe(true);
+    expect(await fs.readTextFile('ONE.TXT', 'C:\\')).toBe('one');
+    expect(await fs.readTextFile('TWO.TXT', 'C:\\')).toBe('two');
+    expect(await fs.readTextFile('KEEP.LOG', 'C:\\')).toBe('keep');
+    await expect(fs.deleteFiles('NONE-*.TXT', 'C:\\')).rejects.toThrow('一致するファイルがありません');
+  });
+  it('builds trees, searches names/content and reports metadata', async () => {
+    const fs = createFileSystem();
+    await fs.createDirectory('NOTES', 'C:\\');
+    await fs.writeTextFile('HELLO.TXT', 'C:\\NOTES', 'first line\nRetroDOS searchable text');
+    expect(await fs.tree('NOTES', 'C:\\')).toEqual(['C:\\NOTES', '└── HELLO.TXT']);
+    const results = await fs.search('retrodos', 'C:\\NOTES', 'C:\\');
+    expect(results).toEqual([{ path: 'C:\\NOTES\\HELLO.TXT', match: 'content', line: 2, preview: 'RetroDOS searchable text' }]);
+    expect((await fs.search('hello', 'C:\\', 'C:\\'))[0]).toMatchObject({ path: 'C:\\NOTES\\HELLO.TXT', match: 'name' });
+    const info = await fs.getInfo('NOTES\\HELLO.TXT', 'C:\\');
+    expect(info).toMatchObject({ path: 'C:\\NOTES\\HELLO.TXT', kind: 'file', size: 35 });
+    expect(Number.isNaN(new Date(info.createdAt).getTime())).toBe(false);
+    expect((await fs.getInfo('NOTES', 'C:\\')).childCount).toBe(1);
+  });
+  it('exports and imports a validated drive archive', async () => {
+    const source = createFileSystem();
+    await source.writeTextFile('PORTABLE.TXT', 'C:\\', 'portable data');
+    const archive = await source.exportData();
+    expect(JSON.parse(archive)).toMatchObject({ format: 'retrodos-drive', version: 1 });
+
+    const destination = createFileSystem();
+    await destination.importData(archive);
+    expect(await destination.readTextFile('PORTABLE.TXT', 'C:\\')).toBe('portable data');
+    expect(await destination.undo()).toBe(true);
+    await expect(destination.readTextFile('PORTABLE.TXT', 'C:\\')).rejects.toThrow('ファイルが見つかりません');
+    await expect(destination.importData('{bad json')).rejects.toThrow('JSONファイルを読み取れません');
+    await expect(destination.importData('{}')).rejects.toThrow('対応していない');
+  });
   it('restores saved text files in a new filesystem session', async () => {
     const values = new Map<string, string>();
     const persistence = {
@@ -108,5 +148,7 @@ describe('virtual filesystem', () => {
     expect(await nextSession.getDirectory('NOTES\\SAVED', 'C:\\')).toBe('C:\\NOTES\\SAVED');
     expect(await nextSession.readTextFile('NOTES\\SAVED\\MEMO.TXT', 'C:\\')).toBe('次回も残るメモ');
     await expect(nextSession.readTextFile('BACKUP.TXT', 'C:\\')).rejects.toThrow('ファイルが見つかりません');
+    expect(await nextSession.undo()).toBe(true);
+    expect(await nextSession.readTextFile('BACKUP.TXT', 'C:\\')).toBe('次回も残るメモ');
   });
 });

@@ -1,7 +1,7 @@
 import { FileSystemError, resolvePath } from './path';
 import { initialFileSystem } from './seed';
-import { MemoryStorage, type KeyValueStorage } from './storage';
-import type { FileSystem, FileSystemStorage } from './types';
+import { isDirectoryNode, MemoryStorage, type KeyValueStorage } from './storage';
+import type { DirectoryNode, FileInfo, FileSystem, FileSystemNode, FileSystemStorage, SearchResult } from './types';
 
 export class VirtualFileSystem implements FileSystem {
   constructor(private readonly storage: FileSystemStorage) {}
@@ -67,6 +67,31 @@ export class VirtualFileSystem implements FileSystem {
     if (node.kind !== 'file') throw new FileSystemError(`ファイルではありません: ${resolved}`);
     await this.storage.deleteNode(resolved);
     return resolved;
+  }
+
+  async deleteFiles(pattern: string, currentDirectory: string): Promise<string[]> {
+    if (!pattern.includes('*') && !pattern.includes('?')) return [await this.deleteFile(pattern, currentDirectory)];
+    const normalized = pattern.trim().replace(/\//g, '\\');
+    const separator = normalized.lastIndexOf('\\');
+    const directoryInput = separator === -1
+      ? currentDirectory
+      : separator === 2 && /^[A-Za-z]:\\/.test(normalized)
+        ? normalized.slice(0, 3)
+        : normalized.slice(0, separator) || '\\';
+    const mask = separator === -1 ? normalized : normalized.slice(separator + 1);
+    if (!mask || directoryInput.includes('*') || directoryInput.includes('?')) {
+      throw new FileSystemError('ワイルドカードはファイル名部分にだけ使用できます。');
+    }
+    const directory = await this.getDirectory(directoryInput, currentDirectory);
+    const matcher = wildcardToRegExp(mask === '*.*' ? '*' : mask);
+    const node = await this.storage.getNode(directory);
+    if (node?.kind !== 'directory') throw new FileSystemError(`ディレクトリが見つかりません: ${directory}`);
+    const matches = node.children
+      .filter(child => child.kind === 'file' && matcher.test(child.name))
+      .map(child => joinPath(directory, child.name));
+    if (matches.length === 0) throw new FileSystemError(`一致するファイルがありません: ${pattern}`);
+    await this.storage.deleteNodes(matches);
+    return matches;
   }
 
   async removeDirectory(path: string, currentDirectory: string, recursive = false): Promise<string> {
@@ -135,6 +160,71 @@ export class VirtualFileSystem implements FileSystem {
     return destination;
   }
 
+  async getInfo(path: string, currentDirectory: string): Promise<FileInfo> {
+    const resolved = resolvePath(path, currentDirectory);
+    const node = await this.storage.getNode(resolved);
+    if (!node) throw new FileSystemError(`パスが見つかりません: ${resolved}`);
+    const fallback = new Date().toISOString();
+    return {
+      path: resolved,
+      kind: node.kind,
+      size: nodeSize(node),
+      createdAt: node.createdAt ?? fallback,
+      updatedAt: node.updatedAt ?? node.createdAt ?? fallback,
+      ...(node.kind === 'directory' ? { childCount: node.children.length } : {}),
+    };
+  }
+
+  async tree(path: string, currentDirectory: string): Promise<string[]> {
+    const resolved = await this.getDirectory(path, currentDirectory);
+    const node = await this.storage.getNode(resolved);
+    if (node?.kind !== 'directory') throw new FileSystemError(`ディレクトリが見つかりません: ${resolved}`);
+    const lines = [resolved];
+    appendTreeLines(node, '', lines);
+    return lines;
+  }
+
+  async search(query: string, path: string, currentDirectory: string): Promise<SearchResult[]> {
+    const normalizedQuery = query.trim().normalize('NFKC').toLowerCase();
+    if (!normalizedQuery) throw new FileSystemError('検索語を入力してください。');
+    const resolved = resolvePath(path, currentDirectory);
+    const node = await this.storage.getNode(resolved);
+    if (!node) throw new FileSystemError(`検索先が見つかりません: ${resolved}`);
+    const results: SearchResult[] = [];
+    collectSearchResults(node, resolved, normalizedQuery, results);
+    return results;
+  }
+
+  async undo(): Promise<boolean> {
+    return this.storage.undo();
+  }
+
+  async exportData(): Promise<string> {
+    const root = await this.storage.getNode('C:\\');
+    if (!root || root.kind !== 'directory') throw new FileSystemError('仮想ドライブを読み取れませんでした。');
+    return JSON.stringify({
+      format: 'retrodos-drive',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      root,
+    }, null, 2);
+  }
+
+  async importData(data: string): Promise<void> {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      throw new FileSystemError('JSONファイルを読み取れませんでした。');
+    }
+    if (!parsed || typeof parsed !== 'object') throw new FileSystemError('RetroDOSドライブ形式ではありません。');
+    const archive = parsed as { format?: unknown; version?: unknown; root?: unknown };
+    if (archive.format !== 'retrodos-drive' || archive.version !== 1 || !isDirectoryNode(archive.root)) {
+      throw new FileSystemError('対応していないRetroDOSドライブ形式です。');
+    }
+    await this.storage.replaceRoot(archive.root);
+  }
+
   private async resolveDestination(source: string, destinationPath: string, currentDirectory: string): Promise<string> {
     const requested = resolvePath(destinationPath, currentDirectory);
     const destinationNode = await this.storage.getNode(requested);
@@ -160,6 +250,47 @@ function parentPath(path: string): string {
 
 function baseName(path: string): string {
   return path.slice(path.lastIndexOf('\\') + 1);
+}
+
+function joinPath(directory: string, name: string): string {
+  return directory === 'C:\\' ? `${directory}${name}` : `${directory}\\${name}`;
+}
+
+function wildcardToRegExp(mask: string): RegExp {
+  const escaped = mask.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp(`^${escaped}$`, 'i');
+}
+
+function nodeSize(node: FileSystemNode): number {
+  return node.kind === 'file'
+    ? new TextEncoder().encode(node.content).length
+    : node.children.reduce((total, child) => total + nodeSize(child), 0);
+}
+
+function appendTreeLines(directory: DirectoryNode, prefix: string, lines: string[]): void {
+  const children = [...directory.children].sort((left, right) => {
+    if (left.kind !== right.kind) return left.kind === 'directory' ? -1 : 1;
+    return left.name.localeCompare(right.name, 'ja');
+  });
+  children.forEach((child, index) => {
+    const last = index === children.length - 1;
+    lines.push(`${prefix}${last ? '└──' : '├──'} ${child.name}${child.kind === 'directory' ? '\\' : ''}`);
+    if (child.kind === 'directory') appendTreeLines(child, `${prefix}${last ? '    ' : '│   '}`, lines);
+  });
+}
+
+function collectSearchResults(node: FileSystemNode, path: string, query: string, results: SearchResult[]): void {
+  if (results.length >= 500) return;
+  if (node.name.normalize('NFKC').toLowerCase().includes(query)) results.push({ path, match: 'name' });
+  if (node.kind === 'file') {
+    node.content.split('\n').forEach((line, index) => {
+      if (results.length < 500 && line.normalize('NFKC').toLowerCase().includes(query)) {
+        results.push({ path, match: 'content', line: index + 1, preview: line.trim().slice(0, 160) });
+      }
+    });
+    return;
+  }
+  for (const child of node.children) collectSearchResults(child, joinPath(path, child.name), query, results);
 }
 
 export const createFileSystem = (persistence?: KeyValueStorage) => new VirtualFileSystem(new MemoryStorage(initialFileSystem, persistence));

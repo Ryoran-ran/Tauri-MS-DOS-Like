@@ -13,7 +13,7 @@ describe('command execution', () => {
     expect((await executeCommand('HELP CHDIR', context())).output.join('\n')).toContain('CD [パス]');
   });
   it('executes basic commands and aliases', async () => {
-    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.1.0']);
+    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.2.0']);
     expect((await executeCommand('echo "こんにちは 世界"', context())).output).toEqual(['こんにちは 世界']);
     expect((await executeCommand('ECHO', context())).output).toEqual(['']);
     expect((await executeCommand('clear', context())).clearTerminal).toBe(true);
@@ -51,6 +51,26 @@ describe('command execution', () => {
     expect((await executeCommand('RMDIR TREE', ctx)).error).toBe(true);
     expect((await executeCommand('RMDIR /S TREE', ctx)).output.join('\n')).toContain('フォルダーと中身を削除しました');
   });
+  it('supports v0.2 navigation, discovery, pager, metadata and transfer commands', async () => {
+    const ctx = context();
+    expect((await executeCommand('PWD', ctx)).output).toEqual(['C:\\']);
+    expect((await executeCommand('TREE DOCS', ctx)).output.join('\n')).toContain('COMMANDS.TXT');
+    expect((await executeCommand('FIND RetroDOS', ctx)).output.join('\n')).toContain('README.TXT');
+    expect((await executeCommand('MORE README.TXT', ctx))).toMatchObject({ activeView: 'pager', pager: { path: 'C:\\README.TXT' } });
+    expect((await executeCommand('STAT README.TXT', ctx)).output.join('\n')).toContain('Modified');
+    const exported = await executeCommand('EXPORT TEST-DRIVE', ctx);
+    expect(exported.download).toMatchObject({ fileName: 'TEST-DRIVE.JSON', mimeType: 'application/json' });
+    expect(JSON.parse(exported.download!.content)).toMatchObject({ format: 'retrodos-drive', version: 1 });
+    expect((await executeCommand('IMPORT', ctx)).activeView).toBe('import');
+  });
+  it('supports wildcard deletion and UNDO', async () => {
+    const ctx = context();
+    await ctx.fileSystem.writeTextFile('ONE.LOG', 'C:\\', 'one');
+    await ctx.fileSystem.writeTextFile('TWO.LOG', 'C:\\', 'two');
+    expect((await executeCommand('DEL *.LOG', ctx)).output.join('\n')).toContain('2 ファイルを削除しました');
+    expect((await executeCommand('UNDO', ctx)).output.join('\n')).toContain('取り消しました');
+    expect(await ctx.fileSystem.readTextFile('ONE.LOG', 'C:\\')).toBe('one');
+  });
   it('opens the Vim editor with an absolute document path', async () => {
     const ctx = context();
     ctx.currentDirectory = 'C:\\DOCS';
@@ -70,7 +90,7 @@ describe('command execution', () => {
     expect((await executeCommand('DATE', context())).output).toEqual(['現在の日付 (JST): 2026/10/09']);
     expect((await executeCommand('TIME', context())).output).toEqual(['現在の時刻 (JST): 1:05:06']);
   });
-  it.each(['TYPE', 'TYPE ""', 'MKDIR', 'DEL', 'RMDIR', 'RMDIR /S', 'COPY ONE', 'REN ONE', 'MOVE ONE', 'CLS unexpected', 'RUN', 'DIR DOCS SYSTEM', 'ECHO "unclosed'])('handles invalid input %s', async input => {
+  it.each(['TYPE', 'TYPE ""', 'MKDIR', 'DEL', 'RMDIR', 'RMDIR /S', 'COPY ONE', 'REN ONE', 'MOVE ONE', 'FIND', 'MORE', 'STAT', 'PWD EXTRA', 'IMPORT EXTRA', 'CLS unexpected', 'RUN', 'DIR DOCS SYSTEM', 'ECHO "unclosed'])('handles invalid input %s', async input => {
     expect((await executeCommand(input, context())).error).toBe(true);
   });
   it('guides unknown commands to HELP and preserves the directory on filesystem errors', async () => {
@@ -88,7 +108,7 @@ describe('command execution', () => {
 describe('shared command discovery', () => {
   it('searches names, Japanese descriptions and aliases without case sensitivity', () => {
     expect(searchCommands('hElP').map(command => command.name)).toEqual(['HELP']);
-    expect(searchCommands('ディレクトリ').map(command => command.name)).toEqual(['DIR', 'CD', 'MKDIR']);
+    expect(searchCommands('ディレクトリ').map(command => command.name)).toEqual(['DIR', 'CD', 'PWD', 'MKDIR']);
     expect(searchCommands('削除').map(command => command.name)).toEqual(['DEL', 'RMDIR']);
     expect(searchCommands('chdir').map(command => command.name)).toEqual(['CD']);
     expect(searchCommands('no-results')).toEqual([]);
@@ -96,7 +116,7 @@ describe('shared command discovery', () => {
   it('completes names/aliases using the same registry', () => {
     expect(completeCommand('he')).toEqual(['HELP']);
     expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'CD', 'CHDIR', 'COPY']);
-    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE']);
+    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE']);
     expect(completeCommand('R')).toEqual(['RMDIR', 'RD', 'REN', 'RENAME', 'RUN']);
     expect(completeCommand('CD DOC')).toEqual([]);
     expect(completeCommand('')).toEqual([]);

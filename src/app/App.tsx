@@ -7,6 +7,8 @@ import { Terminal } from '../components/terminal/Terminal';
 import type { CommandDefinition } from '../features/commands/types';
 import { GameHost } from '../features/games/GameHost';
 import { GameLibrary } from '../features/games/GameLibrary';
+import { DriveImport } from '../features/filesystem/DriveImport';
+import { MoreViewer } from '../features/filesystem/MoreViewer';
 import { VimEditor } from '../features/vim/VimEditor';
 import { useCommandInput } from '../hooks/useCommandInput';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -78,6 +80,8 @@ export function App() {
           <WorkspaceTabs activeView={activeView} onNavigate={navigate} onExitGame={workspace.exitGame} />
           {activeView === 'terminal' && <Terminal entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} input={input} onInsert={insert} />}
           <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} onExit={() => navigate('terminal')} />
+          {activeView === 'pager' && workspace.pager && <MoreViewer path={workspace.pager.path} content={workspace.pager.content} onExit={() => navigate('terminal')} />}
+          {activeView === 'import' && <DriveImport onImport={workspace.importDrive} onExit={() => navigate('terminal')} />}
           {activeView === 'game-library' && <GameLibrary onLaunch={name => { void runCommand(`RUN ${name}`); }} onBack={() => navigate('terminal')} />}
           {activeView === 'game' && workspace.activeGame && <GameHost id={workspace.activeGame} onExit={workspace.exitGame} />}
         </main>

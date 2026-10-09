@@ -211,6 +211,27 @@ kbd {
 .vim-help span { display: flex; align-items: center; gap: 4px; }
 .vim-help kbd { color: #000; background: #55ffff; border-color: #fff #005555 #005555 #fff; }
 
+.more-view { display: flex; flex: 1; flex-direction: column; min-height: 0; margin: 10px 14px 12px; color: #fff; background: #000; border: 4px double #c0c0c0; box-shadow: 7px 7px 0 #0008; }
+.more-titlebar { display: flex; min-height: 29px; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 9px; overflow: hidden; color: #000080; background: #c0c0c0; border-bottom: 2px solid #fff; font: 700 10px var(--mono); }
+.more-titlebar span:last-child { overflow: hidden; color: #000; text-overflow: ellipsis; white-space: nowrap; }
+.more-content { flex: 1; min-height: 0; overflow: hidden; padding: 10px 14px; outline: none; font: 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.more-content:focus { box-shadow: inset 0 0 0 2px #000080; }
+.more-statusbar { display: flex; min-height: 31px; align-items: center; justify-content: space-between; gap: 14px; padding: 4px 8px; color: #000; background: #c0c0c0; border-top: 2px solid #fff; font: 10px var(--mono); }
+.more-statusbar strong { padding: 2px 6px; color: #fff; background: #000080; white-space: nowrap; }
+.more-statusbar > span { display: flex; align-items: center; gap: 5px; }
+
+.import-view { display: grid; flex: 1; min-height: 0; place-items: center; overflow: auto; padding: 20px; color: #000; background: #0000aa; }
+.import-window { width: min(620px, 100%); background: #c0c0c0; border: 4px double #fff; box-shadow: 8px 8px 0 #000; }
+.import-titlebar { padding: 7px 9px; color: #fff; background: #000080; border-bottom: 2px solid #000; font: 700 11px var(--mono); }
+.import-body { display: grid; gap: 15px; padding: 18px; }
+.import-body > p { color: #000; font: 11px/1.7 var(--mono); }
+.import-file-field { display: grid; gap: 7px; color: #000080; font: 700 10px var(--mono); }
+.import-file-field input { width: 100%; padding: 8px; color: #fff; background: #000; border: 2px solid; border-color: #000 #fff #fff #000; }
+.import-selection { padding: 8px; color: #fff; background: #000080; font: 11px var(--mono); overflow-wrap: anywhere; }
+.import-body .import-warning { padding: 8px; color: #000; background: #ffff55; border: 1px solid #000; }
+.import-error { padding: 8px; color: #fff; background: #aa0000; font: 11px var(--mono); }
+.import-actions { display: flex; justify-content: flex-end; gap: 9px; }
+
 .library-view { padding: 12px 14px; color: #fff; background: #0000aa; }
 .library-selector-panel {
   padding: 8px 10px;
@@ -287,6 +308,7 @@ kbd {
   .sidebar { width: 254px; }
   .terminal-view, .library-view { padding: 10px 11px 8px; }
   .vim-view { padding: 8px 10px 10px; }
+  .more-view { margin: 8px 10px 10px; }
 }
 @media (max-width: 720px) {
   .app-shell { grid-template-rows: 42px minmax(0, 1fr) 28px; }
@@ -302,6 +324,8 @@ kbd {
   .input-prompt, .terminal-input-form input { font-size: 11px; }
   .library-view { padding: 7px; }
   .vim-view { padding: 6px; }
+  .more-view { margin: 6px; }
+  .more-statusbar > span { font-size: 8px; }
   .vim-line-numbers { width: 42px; flex-basis: 42px; padding-right: 6px; }
   .vim-line-numbers, .vim-editor { font-size: 11px; }
   .vim-help { gap: 4px 8px; }
@@ -324,4 +348,9 @@ kbd {
   .vim-titlebar span:first-child { display: none; }
   .vim-mode { min-width: 78px; }
   .vim-help span:nth-child(3), .vim-help span:nth-child(4), .vim-help span:nth-child(5) { display: none; }
+  .more-statusbar > span kbd:nth-of-type(2), .more-statusbar > span kbd:nth-of-type(3), .more-statusbar > span kbd:nth-of-type(4) { display: none; }
+  .import-view { padding: 8px; }
+  .import-body { padding: 12px; }
+  .import-actions { flex-direction: column-reverse; }
+  .import-actions .button { width: 100%; }
 }
