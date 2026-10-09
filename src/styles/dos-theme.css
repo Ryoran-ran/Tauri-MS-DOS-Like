@@ -1,0 +1,327 @@
+/* MS-DOS-inspired 16-color interface. Loaded last to override the base layout. */
+:root {
+  font-family: 'Cascadia Mono', 'MS Gothic', 'BIZ UDGothic', 'Yu Gothic UI', monospace;
+  color: #c0c0c0;
+  background: #000;
+  --bg: #000;
+  --surface: #000080;
+  --surface-hover: #0000aa;
+  --line: #00aaaa;
+  --muted: #aaa;
+  --green: #55ff55;
+  --cyan: #55ffff;
+  --blue: #0000aa;
+  --navy: #000080;
+  --gray: #c0c0c0;
+  --yellow: #ffff55;
+  --red: #ff5555;
+  --mono: 'Cascadia Mono', 'MS Gothic', 'BIZ UDGothic', 'Yu Gothic UI', monospace;
+}
+
+body { overflow: hidden; background: #000; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+button, input, textarea { font-family: var(--mono); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid #ffff55; outline-offset: 1px; }
+input::placeholder { color: #808080; }
+::selection { color: #000; background: #55ffff; }
+::-webkit-scrollbar { width: 16px; height: 16px; background: #c0c0c0; }
+::-webkit-scrollbar-thumb { background: #808080; border: 2px solid; border-color: #fff #000 #000 #fff; border-radius: 0; }
+::-webkit-scrollbar-corner { background: #c0c0c0; }
+
+kbd {
+  padding: 1px 4px;
+  color: #000;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #555 #555 #fff;
+  border-radius: 0;
+  font-size: 10px;
+}
+.icon-button {
+  width: 30px;
+  height: 26px;
+  color: #000;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #000 #000 #fff;
+  border-radius: 0;
+}
+.icon-button:hover { color: #fff; background: #0000aa; }
+.icon-button:active { border-color: #000 #fff #fff #000; }
+.button {
+  min-height: 31px;
+  padding: 5px 14px;
+  color: #000;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #fff #000 #000 #fff;
+  border-radius: 0;
+  font-size: 12px;
+}
+.button.primary { color: #000; background: #55ffff; border-color: #fff #005555 #005555 #fff; }
+.button.primary:hover:not(:disabled), .button.secondary:hover { color: #fff; background: #0000aa; border-color: #55ffff #000 #000 #55ffff; }
+.button.secondary { color: #000; background: #c0c0c0; border-color: #fff #000 #000 #fff; }
+.text-button { padding: 4px 6px; color: #fff; background: #000080; }
+.text-button:hover { color: #000; background: #55ffff; }
+.eyebrow { color: #55ffff; font: 10px var(--mono); letter-spacing: 1px; }
+.status-dot { width: 8px; height: 8px; background: #55ff55; border-radius: 0; }
+
+.app-shell { grid-template-rows: 44px minmax(0, 1fr) 28px; background: #000; }
+.titlebar { gap: 12px; padding: 0 12px; color: #fff; background: #0000aa; border-bottom: 2px solid #55ffff; }
+.brand { gap: 8px; color: #fff; font: 700 16px var(--mono); letter-spacing: 0; }
+.brand-icon { width: 27px; height: 25px; color: #000; background: #55ffff; border: 1px solid #fff; border-radius: 0; }
+.brand-dos { color: #55ffff; }
+.version-tag { color: #fff; background: #000080; border: 1px solid #55ffff; border-radius: 0; font: 10px var(--mono); }
+.title-breadcrumb { gap: 10px; color: #fff; font: 11px var(--mono); }
+.title-breadcrumb svg { color: #55ffff; }
+.environment-label { color: #fff; font: 10px var(--mono); }
+
+.sidebar { width: 280px; color: #fff; background: #000080; border-right: 2px solid #55ffff; }
+.sidebar-heading { padding: 10px 14px 8px; color: #000; background: #00aaaa; border-bottom: 1px solid #55ffff; }
+.sidebar-heading h2 { color: #000; font: 700 12px var(--mono); }
+.count-badge { padding: 1px 4px; color: #fff; background: #000080; border-radius: 0; }
+.search-field {
+  min-height: 34px;
+  margin: 9px 9px 7px;
+  padding: 0 7px;
+  color: #000;
+  background: #fff;
+  border: 2px solid;
+  border-color: #000 #55ffff #55ffff #000;
+  border-radius: 0;
+}
+.search-field:focus-within { border-color: #000 #55ffff #55ffff #000; box-shadow: 0 0 0 2px #ffff55; }
+.search-field input { color: #000; font: 11px var(--mono); }
+.search-field .icon-button { color: #fff; background: #000080; border-color: #55ffff #000 #000 #55ffff; }
+.sidebar-list { padding: 2px 7px 7px; }
+.search-summary { padding: 4px 6px 8px; color: #55ffff; }
+.command-group + .command-group { margin-top: 6px; }
+.command-group h3 { margin: 3px 0; padding: 3px 6px; color: #000; background: #00aaaa; font: 700 10px var(--mono); }
+.command-group h3 span { color: #000; }
+.command-item { gap: 12px; padding: 6px 8px; color: #fff; border-radius: 0; }
+.command-item code { width: 48px; color: #55ffff; font-size: 12px; }
+.command-item > span { color: #fff; font: 11px var(--mono); }
+.command-item:hover, .command-item.selected { color: #000; background: #55ffff; border-color: #fff; }
+.command-item:hover code, .command-item.selected code,
+.command-item:hover span, .command-item.selected span { color: #000; }
+.empty-search { color: #55ffff; }
+.empty-search p { color: #fff; }
+.empty-search span { color: #aaa; }
+.sidebar-tip { padding: 8px 11px; color: #fff; border-top: 1px solid #00aaaa; }
+.sidebar-tip p span { color: #55ffff; }
+.sidebar-footer { padding: 7px 11px; color: #000; background: #c0c0c0; border-top: 2px solid #fff; }
+.sidebar-footer:hover { color: #fff; background: #0000aa; }
+
+.command-details { max-height: 49%; color: #000; background: #c0c0c0; border-top: 3px double #fff; }
+.command-detail-content { padding: 10px 12px 0; }
+.command-details-actions { padding: 9px 12px 11px; }
+.detail-heading .eyebrow { color: #000080; }
+.command-details h3 { color: #000080; font: 700 18px var(--mono); }
+.command-details h3 span { color: #000; font-family: var(--mono); }
+.command-details p { color: #000; line-height: 1.65; }
+.detail-label { color: #000080; font-weight: 700; }
+.usage-code { color: #fff; background: #000080; border: 1px solid #000; border-radius: 0; }
+.example-list { color: #000; }
+.example-list code::before { color: #000080; }
+.argument-list dt { color: #000080; font-weight: 700; }
+.argument-list dt span, .argument-list dd { color: #000; }
+
+.workspace { background: #000; }
+.workspace-tabs { height: 38px; gap: 0; padding: 0; background: #00aaaa; border-bottom: 2px solid #55ffff; }
+.workspace-tab { gap: 7px; padding: 0 16px; color: #000; border-right: 1px solid #000080; border-bottom: 0; font: 700 11px var(--mono); }
+.workspace-tab:hover { color: #fff; background: #0000aa; }
+.workspace-tab.active { color: #fff; background: #000080; border-bottom: 0; box-shadow: inset 0 -3px #ffff55; }
+.game-exit-link { padding: 0 14px; color: #000; background: #c0c0c0; border-left: 2px solid #fff; }
+.game-exit-link:hover { color: #fff; background: #0000aa; }
+.game-exit-link kbd { margin-right: 2px; }
+.game-exit-link:hover kbd { color: #000; background: #ffff55; }
+.view-heading { margin-bottom: 12px; padding: 7px 9px; color: #fff; background: #000080; border: 2px solid #55ffff; }
+.view-heading h1 { margin-top: 4px; color: #fff; font: 700 20px var(--mono); letter-spacing: 0; }
+.view-heading p { margin-top: 4px; color: #c0c0c0; font: 10px var(--mono); }
+.heading-cursor { color: #ffff55; }
+.terminal-heading-icon { width: 44px; height: 40px; color: #000; background: #55ffff; border: 2px solid; border-color: #fff #005555 #005555 #fff; border-radius: 0; }
+
+.statusbar { gap: 16px; padding: 0 10px; color: #000; background: #00aaaa; border-top: 2px solid #55ffff; font: 10px var(--mono); }
+.execution-status { color: #000; font-size: 10px; font-weight: 700; }
+.execution-status.error { color: #fff; background: #aa0000; padding: 2px 5px; }
+.execution-status.error .status-dot { background: #ffff55; }
+.execution-status.running { color: #000080; }
+.execution-status.running .status-dot { background: #ffff55; }
+.virtual-label { font-family: var(--mono); }
+.status-version { color: #000; }
+
+.terminal-view { padding: 12px 14px 9px; background: #000; }
+.terminal-panel { color: #c0c0c0; background: #000; border: 4px double #c0c0c0; border-radius: 0; box-shadow: none; }
+.terminal-panel-header { height: 29px; padding: 0 10px; color: #000; background: #c0c0c0; border-bottom: 2px solid #fff; border-radius: 0; font: 700 10px var(--mono); }
+.panel-path { color: #000080; }
+.terminal-output { padding: 15px 16px; color: #c0c0c0; background: #000; font: 13px/1.65 var(--mono); }
+.terminal-entry.system { margin-bottom: 9px; color: #55ffff; }
+.terminal-entry.system:first-child { color: #fff; }
+.terminal-entry.input { margin-top: 13px; margin-bottom: 4px; color: #fff; }
+.terminal-entry.error { color: #ff5555; background: #550000; }
+.output-prompt, .input-prompt { color: #55ff55; }
+.cleared-message { color: #aaa; }
+.new-output-button { color: #000; background: #55ffff; border: 2px solid; border-color: #fff #005555 #005555 #fff; border-radius: 0; box-shadow: none; }
+.terminal-input-form { min-height: 47px; padding: 7px 10px; background: #000; border-top: 2px solid #c0c0c0; border-radius: 0; }
+.input-prompt { font: 700 13px var(--mono); }
+.terminal-input-form input { height: 29px; padding: 3px 5px; color: #fff; background: #000; border-bottom: 1px solid #555; caret-color: #fff; font: 13px var(--mono); }
+.terminal-input-form input:focus { border-bottom-color: #55ffff; }
+.terminal-input-form:focus-within { box-shadow: inset 0 0 0 2px #000080; }
+.execute-button { color: #000; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; border-radius: 0; }
+.execute-button:hover:not(:disabled) { color: #fff; background: #0000aa; }
+.completion-menu { bottom: calc(100% + 4px); left: 8px; color: #000; background: #c0c0c0; border: 4px double #000; border-radius: 0; box-shadow: 6px 6px 0 #0008; }
+.completion-hint { color: #000080; }
+.completion-menu button { color: #000; border-radius: 0; }
+.completion-menu button.highlighted, .completion-menu button:hover { color: #fff; background: #000080; }
+.terminal-bottom { padding-top: 7px; }
+.quick-commands button { color: #000; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; border-radius: 0; }
+.quick-commands button:hover { color: #fff; background: #0000aa; border-color: #55ffff #000 #000 #55ffff; }
+.quick-commands > span, .keyboard-hint { color: #aaa; }
+
+.vim-view { display: flex; flex: 1; min-height: 0; padding: 10px 14px 12px; color: #c0c0c0; background: #0000aa; }
+.vim-view[hidden] { display: none; }
+.vim-window { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; background: #000; border: 4px double #c0c0c0; box-shadow: 7px 7px 0 #0008; }
+.vim-titlebar { display: flex; min-height: 29px; align-items: center; justify-content: space-between; gap: 20px; padding: 4px 9px; overflow: hidden; color: #000080; background: #c0c0c0; border-bottom: 2px solid #fff; font: 700 10px var(--mono); }
+.vim-titlebar span:last-child { min-width: 0; overflow: hidden; color: #000; text-overflow: ellipsis; white-space: nowrap; }
+.vim-editor-shell { display: flex; flex: 1; min-height: 0; background: #000; }
+.vim-line-numbers { width: 52px; flex: 0 0 52px; overflow: hidden; padding: 10px 9px 10px 4px; color: #00aaaa; background: #000080; border-right: 1px solid #00aaaa; font: 13px/1.6 var(--mono); text-align: right; user-select: none; }
+.vim-line-numbers span { display: block; height: 1.6em; }
+.vim-editor { flex: 1; width: 0; min-height: 0; resize: none; overflow: auto; padding: 10px 12px; color: #fff; background: #000; border: 0; border-radius: 0; outline: none; caret-color: #ffff55; font: 13px/1.6 var(--mono); tab-size: 4; white-space: pre; }
+.vim-editor[readonly] { cursor: default; }
+.vim-editor:focus { box-shadow: inset 0 0 0 2px #000080; }
+.vim-statusbar { display: flex; min-height: 29px; align-items: center; gap: 10px; padding: 3px 7px; color: #000; background: #c0c0c0; border-top: 2px solid #fff; font: 11px var(--mono); }
+.vim-status-message { display: flex; min-width: 0; flex: 1; align-items: center; gap: 9px; }
+.vim-status-message > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vim-mode { min-width: 88px; padding: 2px 6px; color: #fff; background: #000080; text-align: center; white-space: nowrap; }
+.vim-mode-insert { color: #000; background: #55ffff; }
+.vim-command-line { display: flex; min-width: 0; flex: 1; align-items: center; gap: 2px; color: #fff; background: #000080; padding: 1px 5px; }
+.vim-command-line input { width: 100%; height: 20px; color: #fff; background: transparent; border: 0; outline: none; font: 11px var(--mono); }
+.vim-position { margin-left: auto; color: #000080; white-space: nowrap; }
+.vim-help { display: flex; min-height: 30px; flex-wrap: wrap; align-items: center; gap: 5px 13px; padding: 5px 8px; color: #aaa; background: #000080; border-top: 1px solid #00aaaa; font-size: 9px; }
+.vim-help span { display: flex; align-items: center; gap: 4px; }
+.vim-help kbd { color: #000; background: #55ffff; border-color: #fff #005555 #005555 #fff; }
+
+.library-view { padding: 12px 14px; color: #fff; background: #0000aa; }
+.library-selector-panel {
+  padding: 8px 10px;
+  color: #c0c0c0;
+  background: #000;
+  border: 4px double #c0c0c0;
+}
+.library-selector-form { display: flex; align-items: center; gap: 8px; }
+.library-selector-form label { color: #55ff55; font: 700 13px var(--mono); }
+.library-selector-form input {
+  flex: 1;
+  min-width: 0;
+  height: 31px;
+  padding: 4px 7px;
+  color: #fff;
+  background: #000;
+  border: 0;
+  border-bottom: 1px solid #55ffff;
+  outline: none;
+  font: 13px var(--mono);
+  text-transform: uppercase;
+}
+.library-selector-form input:focus { box-shadow: inset 0 -2px #ffff55; }
+.library-selector-form .button { min-height: 31px; padding: 4px 12px; }
+.library-key-help { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 7px; color: #aaa; font-size: 9px; }
+.library-key-help span { display: flex; align-items: center; gap: 5px; }
+.library-selector-error { margin-top: 7px; padding: 3px 6px; color: #fff; background: #aa0000; font-size: 10px; }
+.library-section-title { margin: 10px 0 9px; padding-bottom: 5px; border-bottom: 1px solid #55ffff; }
+.library-section-title h2 { color: #ffff55; font-weight: 700; }
+.library-section-title span { color: #fff; }
+.game-grid { gap: 14px; max-width: 720px; }
+.game-card { max-width: 410px; color: #000; background: #c0c0c0; border: 4px double #fff; border-radius: 0; box-shadow: 7px 7px 0 #000; }
+.game-card.selected { outline: 3px solid #ffff55; outline-offset: 2px; }
+.game-card:focus-visible { outline: 3px solid #55ffff; outline-offset: 2px; }
+.game-art { height: 130px; gap: 8px; color: #55ffff; background: #000080; border-bottom: 2px solid #000; }
+.game-index { position: absolute; top: 6px; left: 8px; z-index: 1; color: #ffff55; font: 700 11px var(--mono); }
+.game-art-numbers { color: #0000aa; font-size: 52px; }
+.game-art-label { color: #fff; font-size: 9px; letter-spacing: 2px; }
+.game-card-body { padding: 13px; }
+.game-tags { gap: 6px; margin-bottom: 10px; }
+.game-tags span { padding: 2px 5px; color: #fff; background: #000080; border: 0; border-radius: 0; font-family: var(--mono); }
+.game-card h3 { color: #000080; font: 700 22px var(--mono); }
+.game-card h3 span { color: #000; font-family: var(--mono); }
+.game-card p { margin: 10px 0 14px; color: #000; line-height: 1.7; }
+.game-card-footer { padding-top: 8px; border-top: 1px solid #555; }
+.game-card-footer code { color: #000080; font-weight: 700; }
+.library-note { color: #fff; }
+
+.game-view { padding: 9px 14px 18px; color: #fff; background: #0000aa; }
+.game-type { color: #55ffff; }
+.guess-game { max-width: 520px; margin-top: 13px; padding: 15px 20px 17px; color: #000; background: #c0c0c0; border: 4px double #fff; box-shadow: 8px 8px 0 #000; }
+.game-symbol { width: 58px; height: 50px; margin-bottom: 10px; color: #55ffff; background: #000080; border: 2px solid; border-color: #55ffff #000 #000 #55ffff; border-radius: 0; }
+.game-symbol.won { color: #ffff55; background: #000080; border-color: #fff #000 #000 #fff; }
+.guess-game .eyebrow { color: #000080; font-weight: 700; }
+.guess-game h1 { margin: 7px 0 10px; color: #000080; font: 700 34px var(--mono); }
+.guess-game h1 > span { margin-top: 5px; color: #000; font-family: var(--mono); letter-spacing: 0; }
+.game-description { color: #000; line-height: 1.75; }
+.guess-info { margin: 14px 0 9px; padding: 10px 0; color: #fff; background: #000080; border: 2px solid #000; border-radius: 0; }
+.guess-info > div + div { border-left: 1px solid #55ffff; }
+.guess-info > div > span { color: #55ffff; }
+.guess-info strong { color: #fff; }
+.guess-info strong > span { color: #55ffff; }
+.guess-message { color: #000080; font-weight: 700; }
+.guess-message.success { color: #008000; }
+.guess-form input { color: #fff; background: #000; border: 2px solid; border-color: #000 #fff #fff #000; border-radius: 0; }
+.form-error { color: #aa0000; font-weight: 700; }
+.attempts { margin-top: 12px; gap: 5px; }
+.attempts > span { padding: 3px 6px; color: #fff; background: #000080; border: 1px solid #000; border-radius: 0; }
+.attempts > span.correct { color: #000; background: #ffff55; }
+.game-footer-note { color: #555; }
+.game-footer-note kbd { color: #fff; background: #000080; border-color: #55ffff #000 #000 #55ffff; }
+
+@media (max-width: 1000px) {
+  .sidebar { width: 254px; }
+  .terminal-view, .library-view { padding: 10px 11px 8px; }
+  .vim-view { padding: 8px 10px 10px; }
+}
+@media (max-width: 720px) {
+  .app-shell { grid-template-rows: 42px minmax(0, 1fr) 28px; }
+  .sidebar { box-shadow: 8px 0 0 #000; }
+  .sidebar-backdrop { background: #000a; }
+  .workspace-tabs { padding: 0; gap: 0; }
+  .workspace-tab { padding: 0 10px; }
+  .view-heading { margin-bottom: 8px; padding: 5px 7px; }
+  .view-heading h1 { font-size: 17px; }
+  .terminal-view { padding: 7px 6px 6px; }
+  .terminal-output { padding: 11px 9px; font-size: 11px; }
+  .terminal-input-form { padding: 6px 7px; }
+  .input-prompt, .terminal-input-form input { font-size: 11px; }
+  .library-view { padding: 7px; }
+  .vim-view { padding: 6px; }
+  .vim-line-numbers { width: 42px; flex-basis: 42px; padding-right: 6px; }
+  .vim-line-numbers, .vim-editor { font-size: 11px; }
+  .vim-help { gap: 4px 8px; }
+  .library-selector-form { gap: 5px; }
+  .library-selector-form label, .library-selector-form input { font-size: 11px; }
+  .library-key-help { gap: 8px; }
+  .game-view { padding: 7px 9px 15px; }
+  .guess-game { margin-top: 10px; padding: 12px 13px; }
+}
+@media (max-width: 440px) {
+  .workspace-tabs { height: 36px; }
+  .workspace-tab { padding: 0 7px; font-size: 9px; }
+  .terminal-view { padding: 5px 4px; }
+  .terminal-output { padding: 9px 7px; }
+  .library-selector-form { flex-wrap: wrap; }
+  .library-selector-form input { flex-basis: calc(100% - 58px); }
+  .library-selector-form .button { width: 100%; }
+  .game-symbol { width: 50px; height: 43px; }
+  .guess-game h1 { font-size: 29px; }
+  .vim-titlebar span:first-child { display: none; }
+  .vim-mode { min-width: 78px; }
+  .vim-help span:nth-child(3), .vim-help span:nth-child(4), .vim-help span:nth-child(5) { display: none; }
+}

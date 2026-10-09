@@ -1,0 +1,264 @@
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+const commandInput = (page: Page) => page.getByRole('combobox', { name: 'コマンド入力' });
+const run = async (page: Page, command: string) => {
+  await commandInput(page).fill(command);
+  await commandInput(page).press('Enter');
+};
+
+test.beforeEach(async ({ page }) => { await page.goto('/'); });
+
+test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const log = page.getByRole('log');
+  await expect(log).toContainText('RetroDOS Version 0.1.0');
+  await commandInput(page).evaluate(element => element.blur());
+  await page.keyboard.press('Space');
+  await expect(commandInput(page)).toBeFocused();
+  await run(page, 'HELP');
+  await expect(log).toContainText('利用可能なコマンド');
+  await run(page, 'DIR');
+  await expect(log).toContainText('README.TXT');
+  await run(page, 'MKDIR NOTES');
+  await expect(log).toContainText('ディレクトリを作成しました: C:\\NOTES');
+  await run(page, 'CD NOTES');
+  await expect(page.locator('.status-path')).toHaveText('C:\\NOTES');
+  await run(page, 'CD ..');
+  await run(page, 'CD DOCS');
+  await expect(page.locator('.status-path')).toHaveText('C:\\DOCS');
+  await run(page, 'TYPE "WELCOME NOTE.TXT"');
+  await expect(log).toContainText('ようこそ、RetroDOSへ。');
+  await run(page, 'CD MISSING');
+  await expect(page.locator('.execution-status')).toHaveText('ERROR');
+  await expect(page.locator('.status-path')).toHaveText('C:\\DOCS');
+  await run(page, 'CD ..');
+  await expect(page.locator('.status-path')).toHaveText('C:\\');
+  await run(page, 'NOT_A_COMMAND');
+  await expect(log.locator('.error')).toContainText(['コマンドが見つかりません', 'HELP']);
+  await run(page, 'ECHO <img src=x onerror=alert(1)>');
+  await expect(log).toContainText('<img src=x onerror=alert(1)>');
+  await expect(log.locator('img')).toHaveCount(0);
+  await run(page, 'CLS');
+  await expect(log).not.toContainText('Welcome to RetroDOS.');
+  await expect(log.locator('.terminal-entry')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('search, details and insertion do not execute automatically', async ({ page }) => {
+  const search = page.getByRole('textbox', { name: 'コマンドを検索' });
+  await search.fill('ディレクトリ');
+  await expect(page.locator('.command-item')).toHaveCount(3);
+  await search.fill('tYpE');
+  await page.locator('.command-item').click();
+  const details = page.getByRole('region', { name: 'TYPEの詳細' });
+  await expect(details).toContainText('TYPE <ファイルパス>');
+  await expect(details).toContainText('TYPE README.TXT');
+  await expect(details.getByRole('button', { name: '入力欄に挿入' })).toBeInViewport();
+  const initialCount = await page.locator('.terminal-entry').count();
+  await details.getByRole('button', { name: '入力欄に挿入' }).click();
+  await expect(commandInput(page)).toHaveValue('TYPE ');
+  await expect(commandInput(page)).toBeFocused();
+  await expect(page.locator('.terminal-entry')).toHaveCount(initialCount);
+  await search.fill('no-results');
+  await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
+  await search.fill('');
+  await expect(page.locator('.command-item')).toHaveCount(18);
+});
+
+test('file operations support copy, rename, move and deletion', async ({ page }) => {
+  await run(page, 'MKDIR WORK');
+  await run(page, 'VIM NOTE.TXT');
+  const editor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  await editor.press('i');
+  await editor.type('file operation test');
+  await editor.press('Escape');
+  await editor.press('Shift+;');
+  const vimCommand = page.getByRole('textbox', { name: 'Vimコマンド' });
+  await vimCommand.fill('wq');
+  await vimCommand.press('Enter');
+
+  await run(page, 'COPY NOTE.TXT COPY.TXT');
+  await run(page, 'REN COPY.TXT RENAMED.TXT');
+  await run(page, 'MOVE RENAMED.TXT WORK');
+  await run(page, 'TYPE WORK\\RENAMED.TXT');
+  await expect(page.getByRole('log')).toContainText('file operation test');
+  await run(page, 'DEL WORK\\RENAMED.TXT');
+  await run(page, 'RMDIR WORK');
+  await run(page, 'DIR');
+  await expect(page.getByRole('log').locator('.terminal-entry.output').filter({ hasText: '<DIR>        WORK' })).toHaveCount(0);
+});
+
+test('Vim editor supports modal keyboard editing, saving and quitting', async ({ page }) => {
+  await run(page, 'VIM NOTES.TXT');
+  const vim = page.getByRole('region', { name: 'VIMメモ帳' });
+  const editor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  await expect(vim).toBeVisible();
+  await expect(editor).toBeFocused();
+  await expect(vim).toContainText('-- NORMAL --');
+
+  await editor.press('i');
+  await expect(vim).toContainText('-- INSERT --');
+  await editor.type('RetroDOS Vim memo');
+  await editor.press('Enter');
+  await editor.type('second line');
+  await editor.press('Escape');
+  await expect(vim).toContainText('-- NORMAL --');
+
+  await editor.press('Shift+;');
+  const vimCommand = page.getByRole('textbox', { name: 'Vimコマンド' });
+  await expect(vimCommand).toBeFocused();
+  await vimCommand.fill('q');
+  await vimCommand.press('Enter');
+  await expect(page.getByRole('alert')).toContainText('保存されていません');
+  await expect(vim).toBeVisible();
+
+  await editor.press('Shift+;');
+  await vimCommand.fill('w');
+  await vimCommand.press('Enter');
+  await expect(vim).toContainText('書き込み済み');
+
+  await editor.press('Shift+;');
+  await vimCommand.fill('q');
+  await vimCommand.press('Enter');
+  await expect(commandInput(page)).toBeFocused();
+  await run(page, 'TYPE NOTES.TXT');
+  await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
+  await page.reload();
+  await run(page, 'TYPE NOTES.TXT');
+  await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
+});
+
+test('history restores drafts, completion supports keyboard and Escape', async ({ page }) => {
+  const input = commandInput(page);
+  await run(page, 'ECHO first');
+  await run(page, 'VER');
+  await expect(page.locator('.terminal-entry.input')).toHaveCount(2);
+  await input.fill('draft');
+  await input.press('ArrowUp'); await expect(input).toHaveValue('VER');
+  await input.press('ArrowUp'); await expect(input).toHaveValue('ECHO first');
+  await input.press('ArrowDown'); await expect(input).toHaveValue('VER');
+  await input.press('ArrowDown'); await expect(input).toHaveValue('draft');
+  await input.fill('he'); await input.press('Tab'); await expect(input).toHaveValue('HELP ');
+  await input.fill('C'); await input.press('Tab');
+  await expect(page.getByRole('listbox', { name: '補完候補' })).toBeVisible();
+  await input.press('ArrowDown'); await input.press('Enter');
+  await expect(input).toHaveValue('CLEAR ');
+  await expect(page.locator('.terminal-entry.input')).toHaveCount(2);
+  await input.fill('C'); await input.press('Tab'); await input.press('Escape');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await input.press('Control+k');
+  await expect(page.getByRole('textbox', { name: 'コマンドを検索' })).toBeFocused();
+});
+
+test('library, GUESS validation, win, replay and exit', async ({ page }) => {
+  await run(page, 'GAMES');
+  await expect(page.getByRole('region', { name: 'ゲームライブラリ画面' })).toBeVisible();
+  await expect(page.getByRole('article')).toContainText('built-in');
+  await page.getByRole('button', { name: '起動', exact: true }).click();
+  const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
+  const number = page.getByRole('spinbutton', { name: '予想する数字' });
+  await expect(number).toBeFocused();
+  await number.evaluate(element => element.blur());
+  await page.keyboard.press('Space');
+  await expect(number).toBeFocused();
+  await expect(page.locator('.execution-status')).toHaveText('RUNNING');
+  await number.fill('101'); await number.press('Enter');
+  await expect(page.getByRole('alert')).toContainText('1〜100');
+  let won = false;
+  for (let turn = 0; turn < 7; turn++) {
+    const range = await game.locator('.guess-info strong').first().innerText();
+    const digits = range.match(/\d+/g)!.map(Number);
+    await number.fill(String(Math.floor((digits[0]! + digits[1]!) / 2)));
+    await number.press('Enter');
+    await expect(game.locator('.attempts > span')).toHaveCount(turn + 1);
+    if ((await game.locator('.guess-message').innerText()).includes('正解')) { won = true; break; }
+  }
+  expect(won).toBe(true);
+  await game.getByRole('button', { name: 'もう一度遊ぶ' }).click();
+  await expect(number).toBeVisible();
+  await expect(game.locator('.attempts')).toHaveCount(0);
+  await expect(game.locator('.game-footer-note kbd').filter({ hasText: 'Esc' })).toHaveText('Esc');
+  await number.press('Escape');
+  await expect(commandInput(page)).toBeFocused();
+  await expect(page.locator('.execution-status')).toHaveText('READY');
+  await run(page, 'RUN GUESS');
+  await expect(game).toBeVisible();
+  await page.getByRole('button', { name: 'ゲームを終了', exact: true }).click();
+  await expect(commandInput(page)).toBeFocused();
+});
+
+test('game library supports code, number and arrow-only keyboard selection', async ({ page }) => {
+  const selector = page.getByRole('textbox', { name: 'ゲームコードまたは番号' });
+  const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
+
+  await run(page, 'GAMES');
+  await expect(selector).toBeFocused();
+  await selector.evaluate(element => element.blur());
+  await page.keyboard.press('Space');
+  await expect(selector).toBeFocused();
+  await selector.fill('UNKNOWN');
+  await selector.press('Enter');
+  await expect(page.getByRole('alert')).toContainText('ゲームが見つかりません');
+
+  await selector.fill('guess');
+  await selector.press('Enter');
+  await expect(game).toBeVisible();
+  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Escape');
+
+  await run(page, 'GAMES');
+  await selector.fill('1');
+  await selector.press('Enter');
+  await expect(game).toBeVisible();
+  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Escape');
+
+  await run(page, 'GAMES');
+  await selector.press('ArrowDown');
+  await expect(page.locator('.game-card.selected')).toContainText('GUESS');
+  await selector.press('Enter');
+  await expect(game).toBeVisible();
+  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Escape');
+
+  await run(page, 'GAMES');
+  await selector.press('Escape');
+  await expect(commandInput(page)).toBeFocused();
+});
+
+test('new output keeps older logs in place until explicitly following', async ({ page }) => {
+  const log = page.getByRole('log');
+  await run(page, 'ECHO ' + Array.from({ length: 90 }, (_, index) => `line-${index}`).join('\n'));
+  await expect(log).toContainText('line-89');
+  // The parser treats newlines as whitespace. A long help log also exercises scrolling.
+  for (let index = 0; index < 5; index++) { await run(page, 'HELP'); }
+  await expect(page.locator('.terminal-entry.input')).toHaveCount(6);
+  await log.evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')); });
+  await run(page, 'ECHO latest-output');
+  await expect(page.getByRole('button', { name: '新しい出力' })).toBeVisible();
+  expect(await log.evaluate(element => element.scrollTop)).toBe(0);
+  await page.getByRole('button', { name: '新しい出力' }).click();
+  await expect(page.getByRole('button', { name: '新しい出力' })).toHaveCount(0);
+  expect(await log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(48);
+});
+
+test('resizing and sidebar toggles keep input and status visible', async ({ page }) => {
+  for (const size of [{ width: 1180, height: 780 }, { width: 800, height: 600 }, { width: 520, height: 480 }, { width: 375, height: 667 }]) {
+    await page.setViewportSize(size);
+    if (size.width <= 720 && await page.locator('.sidebar').count()) await page.locator('.sidebar-toggle').click();
+    await expect(commandInput(page)).toBeVisible();
+    await expect(page.locator('.statusbar')).toBeVisible();
+    const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+    expect(dimensions.scroll).toBe(dimensions.width);
+    const box = await commandInput(page).boundingBox();
+    expect(box!.y + box!.height).toBeLessThan(size.height - 25);
+  }
+  await page.locator('.sidebar-toggle').click();
+  await expect(page.getByRole('textbox', { name: 'コマンドを検索' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'コマンドを検索' }).fill('run');
+  await page.locator('.command-item').click();
+  await page.getByRole('button', { name: '入力欄に挿入' }).click();
+  await expect(page.locator('.sidebar')).toHaveCount(0);
+  await expect(commandInput(page)).toHaveValue('RUN GUESS');
+  await expect(commandInput(page)).toBeFocused();
+  await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
+});
