@@ -97,12 +97,18 @@ export function useWorkspace() {
     setActiveView(view);
   }, []);
 
+  const openDocument = useCallback((path: string) => {
+    setActiveDocument(path);
+    setOpenViews(views => views.includes('vim') ? views : [...views, 'vim']);
+    setActiveView('vim');
+  }, []);
+
   const closeView = useCallback((view: Exclude<ActiveView, 'terminal'>) => {
     setOpenViews(views => views.filter(openView => openView !== view));
     setActiveView(current => current === view ? 'terminal' : current);
   }, []);
 
-  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, appLaunches, fileRevision, programLibraryLaunch, shellCommandNames: shell.completionNames(), runCommand, importDrive, exitGame, navigate, closeView };
+  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, appLaunches, fileRevision, programLibraryLaunch, shellCommandNames: shell.completionNames(), runCommand, importDrive, exitGame, navigate, openDocument, closeView };
 }
 
 function downloadFile(fileName: string, content: string, mimeType: string): void {

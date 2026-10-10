@@ -108,7 +108,7 @@ export function App() {
         <main className="workspace" inert={narrow && sidebarOpen}>
           <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} onLaunchCommand={command => { void runCommand(command); }} />
           <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} followEnabled={settings.followOutput} />
-          <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} closeRequest={vimCloseRequest} onExit={closeVim} />
+          <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} closeRequest={vimCloseRequest} onExit={closeVim} onOpenDocument={workspace.openDocument} />
           {workspace.openViews.includes('pager') && workspace.pager && <MoreViewer active={activeView === 'pager'} path={workspace.pager.path} content={workspace.pager.content} onExit={closePager} />}
           {workspace.openViews.includes('import') && <DriveImport active={activeView === 'import'} onImport={workspace.importDrive} onExit={closeImport} />}
           {workspace.openViews.includes('program-library') && <ProgramLibrary key={workspace.programLibraryLaunch.request} active={activeView === 'program-library'} initialFilter={workspace.programLibraryLaunch.filter} onLaunch={launchProgram} onBack={closeProgramLibrary} />}

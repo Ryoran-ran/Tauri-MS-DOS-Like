@@ -225,6 +225,65 @@ test('Vim editor supports modal keyboard editing, saving and quitting', async ({
   await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
 });
 
+test('Vim supports line yank and paste, redo, search, options and editing another file', async ({ page }) => {
+  await run(page, 'VIM SOURCE.TXT');
+  const vim = page.getByRole('region', { name: 'VIMメモ帳' });
+  const editor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  const ex = async (value: string) => {
+    await editor.press('Shift+;');
+    const command = page.getByRole('textbox', { name: 'Vimコマンド' });
+    await command.fill(value); await command.press('Enter');
+  };
+
+  await editor.press('i');
+  await editor.fill('alpha\nbeta alpha\ngamma');
+  await editor.press('Escape');
+  await editor.press('Home'); await editor.press('k');
+  await editor.press('y'); await editor.press('y');
+  await expect(vim).toContainText('1行ヤンクしました');
+  await editor.press('p');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await editor.press('u');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma');
+  await editor.press('Control+r');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await expect.poll(() => editor.evaluate(element => (element as HTMLTextAreaElement).selectionStart)).toBe(17);
+  await editor.press('d'); await editor.press('d');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma');
+  await editor.press('p');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma\nbeta alpha');
+
+  await editor.press('/');
+  const search = page.getByRole('textbox', { name: 'Vim検索' });
+  await expect(search).toBeFocused();
+  await search.fill('alpha'); await search.press('Enter');
+  await expect.poll(() => editor.evaluate(element => {
+    const input = element as HTMLTextAreaElement;
+    return input.value.slice(input.selectionStart, input.selectionEnd);
+  })).toBe('alpha');
+  await editor.press('n'); await expect(vim).toContainText('/alpha');
+  await editor.press('Shift+n'); await expect(vim).toContainText('?alpha');
+
+  await ex('set nonumber');
+  await expect(vim.locator('.vim-line-numbers')).toHaveCount(0);
+  await ex('set number');
+  await expect(vim.locator('.vim-line-numbers')).toBeVisible();
+  await ex('w');
+
+  await ex('e OTHER.TXT');
+  await expect(page.getByRole('tab', { name: 'OTHER.TXT', exact: true })).toBeVisible();
+  await expect(editor).toHaveValue('');
+  await editor.press('i'); await editor.fill('unsaved other file'); await editor.press('Escape');
+  await ex('e SOURCE.TXT');
+  await expect(page.getByRole('alert')).toContainText('保存されていません');
+  await expect(page.getByRole('tab', { name: 'OTHER.TXT', exact: true })).toBeVisible();
+  await ex('e! SOURCE.TXT');
+  await expect(page.getByRole('tab', { name: 'SOURCE.TXT', exact: true })).toBeVisible();
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma\nbeta alpha');
+  await ex('q');
+  await expect(commandInput(page)).toBeFocused();
+});
+
 test('task tabs show only open apps and keep background tasks available', async ({ page }) => {
   const tabs = page.locator('.workspace-tabs');
   await expect(tabs.locator('.workspace-tab')).toHaveCount(1);

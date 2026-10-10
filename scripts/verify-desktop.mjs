@@ -80,6 +80,32 @@ try {
   await input.fill('ECHO ECHO BAT-OK > C:\\SMOKE.BAT'); await input.press('Enter');
   await input.fill('C:\\SMOKE.BAT'); await input.press('Enter');
   await expect(log).toContainText('BAT-OK');
+  await input.fill('VIM C:\\SMOKE-VIM.TXT'); await input.press('Enter');
+  const vim = page.getByRole('region', { name: 'VIMメモ帳' });
+  const vimEditor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  await expect(vimEditor).toBeFocused();
+  await vimEditor.press('i');
+  await vimEditor.fill('alpha\nbeta alpha\ngamma');
+  await vimEditor.press('Escape');
+  await vimEditor.press('Home'); await vimEditor.press('k');
+  await vimEditor.press('y'); await vimEditor.press('y'); await vimEditor.press('p');
+  await expect(vimEditor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await vimEditor.press('u'); await expect(vimEditor).toHaveValue('alpha\nbeta alpha\ngamma');
+  await vimEditor.press('Control+r'); await expect(vimEditor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await vimEditor.press('/');
+  const vimSearch = page.getByRole('textbox', { name: 'Vim検索' });
+  await vimSearch.fill('alpha'); await vimSearch.press('Enter');
+  await expect.poll(() => vimEditor.evaluate(element => {
+    const editor = element;
+    return editor.value.slice(editor.selectionStart, editor.selectionEnd);
+  })).toBe('alpha');
+  await vimEditor.press('Shift+;');
+  const vimCommand = page.getByRole('textbox', { name: 'Vimコマンド' });
+  await vimCommand.fill('set nonumber'); await vimCommand.press('Enter');
+  await expect(vim.locator('.vim-line-numbers')).toHaveCount(0);
+  await vimEditor.press('Shift+;'); await vimCommand.fill('set number'); await vimCommand.press('Enter');
+  await vimEditor.press('Shift+;'); await vimCommand.fill('wq'); await vimCommand.press('Enter');
+  await expect(input).toBeFocused();
   await input.fill('GAMES'); await input.press('Enter');
   const gameSelector = page.getByRole('textbox', { name: 'プログラムコードまたは番号' });
   await expect(gameSelector).toBeFocused();
@@ -132,7 +158,7 @@ try {
   assert.deepEqual(errors, []);
   await mkdir(fileURLToPath(new URL('../docs/screenshots/', import.meta.url)), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../docs/screenshots/desktop.png', import.meta.url)) });
-  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, IME VER/CLS, shell, BAT, games, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
+  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, IME VER/CLS, shell, BAT, Vim line/search/options, games, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
 } catch (error) {
   if (browser) {
     const page = browser.contexts()[0]?.pages().find(candidate => !candidate.url().startsWith('devtools:'));
