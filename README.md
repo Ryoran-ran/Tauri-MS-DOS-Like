@@ -2,7 +2,7 @@
 
 MS-DOS風のコマンド操作と、現代的なデスクトップUIを組み合わせた仮想ワークスペースです。
 
-React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデスクトップ版を同じコードベースで提供します。現在のバージョンは **v0.2.0** です。
+React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデスクトップ版を同じコードベースで提供します。現在のバージョンは **v0.3.0** です。
 
 ![RetroDOSのターミナル](docs/screenshots/terminal.png)
 
@@ -13,6 +13,8 @@ React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデ�
 - 開いているアプリやファイルだけを表示するタスク型タブ
 - `C:\`から始まる永続的な仮想ファイルシステム
 - ファイル・フォルダーの作成、編集、検索、コピー、移動、削除
+- `.BAT`、`&&`、パイプ、リダイレクトを使ったシェル自動処理
+- 永続的な環境変数、コマンドエイリアス、ユーザー定義コマンド
 - `*`と`?`を使ったワイルドカード削除
 - 最大20件の永続UNDO履歴
 - Vim風の内蔵テキストエディタ
@@ -131,6 +133,15 @@ npm run tauri -- build
 | `EXPORT` | `EXPORT DRIVE.JSON` | 仮想ドライブをJSONへ書き出す |
 | `IMPORT` | `IMPORT` | JSONから仮想ドライブを復元 |
 
+### シェル操作
+
+| コマンド | 使用例 | 機能 |
+| --- | --- | --- |
+| `SET` | `SET NAME=RETRODOS` | 環境変数の設定・確認・削除 |
+| `ALIAS` | `ALIAS LL=DIR` | コマンドの短縮名を登録 |
+| `DEF` | `DEF GREET=ECHO Hello %1` | 引数付きユーザー定義コマンドを登録 |
+| `CALL` | `CALL SCRIPTS\DEMO.BAT` | BATファイルを実行 |
+
 ### ゲームとシステム
 
 | コマンド | 使用例 | 機能 |
@@ -163,6 +174,72 @@ VIM "C:\DOCS\MY NOTE.TXT"
 MKDIR "MY FILES"
 ```
 
+## v0.3 シェル自動化
+
+成功した場合だけ次のコマンドを実行するには、`&&`でつなぎます。途中でエラーが発生すると、それ以降は実行しません。ディレクトリ変更は同じ入力内の後続コマンドへ引き継がれます。
+
+```text
+CD DOCS && DIR
+MKDIR BUILD && CD BUILD && ECHO ready > STATUS.TXT
+```
+
+`>`は出力先を新規作成または上書きし、`>>`は既存内容の末尾へ追記します。出力先は仮想ドライブ上のテキストファイルです。
+
+```text
+ECHO hello > NOTE.TXT
+ECHO second line >> NOTE.TXT
+TYPE NOTE.TXT
+```
+
+`|`は左側のテキスト出力を次のコマンドへ渡します。`FIND`はパイプ入力がある場合、ファイル検索ではなく入力行の絞り込みとして動作します。
+
+```text
+DIR | FIND ".TXT"
+TREE C:\ | FIND "DOCS"
+TYPE README.TXT | FIND "RetroDOS"
+```
+
+環境変数は`%名前%`で展開します。`SET`だけを実行すると一覧を表示し、空の値を指定すると削除します。`%CD%`と`%ERRORLEVEL%`も参照できます。
+
+```text
+SET NAME=RETRODOS
+ECHO Hello %NAME%
+ECHO Current directory: %CD%
+SET NAME=
+```
+
+エイリアスは実行時の引数を展開後のコマンド末尾へ追加します。`ALIAS`だけで一覧を表示し、空の割り当てで削除します。
+
+```text
+ALIAS LL=DIR
+LL C:\DOCS
+ALIAS LL=
+```
+
+ユーザー定義コマンドでは`%1`〜`%9`で個別の引数、`%*`で全引数を参照できます。`&&`などを含む処理本体は引用符で囲みます。`COMMAND`は`DEF`の別名です。
+
+```text
+DEF GREET=ECHO Hello %1
+GREET RetroDOS
+DEF BUILD="CD DOCS && DIR | FIND .TXT"
+BUILD
+DEF GREET=
+```
+
+環境変数、エイリアス、ユーザー定義コマンドはブラウザーまたはデスクトップアプリのローカルストレージへ保存されます。
+
+### BATファイル
+
+`.BAT`はファイル名を直接入力するか、`CALL`で実行します。`CALL`では`.BAT`拡張子を省略できます。
+
+```text
+CALL SCRIPTS\DEMO.BAT
+SCRIPTS\DEMO.BAT
+CALL BUILD release
+```
+
+BAT内では、空行、`REM`、`::`コメント、`@ECHO OFF`、`%0`、`%1`〜`%9`、`%*`を利用できます。各行で`&&`、パイプ、リダイレクト、環境変数を使用できます。エラー発生時はその行で停止します。再帰呼び出しは最大10階層、1ファイルは最大500行、1回の入力で最大500コマンドです。
+
 ## 仮想ファイルシステム
 
 仮想ドライブは`C:`のみです。絶対パス、ルート基準のパス、相対パス、`.`、`..`を使用できます。
@@ -174,6 +251,8 @@ C:\
 ├── DOCS\
 │   ├── COMMANDS.TXT
 │   └── WELCOME NOTE.TXT
+├── SCRIPTS\
+│   └── DEMO.BAT
 ├── SYSTEM\
 │   └── VERSION.TXT
 └── README.TXT
@@ -263,14 +342,14 @@ npm run test:desktop
 
 | コマンド | 確認内容 |
 | --- | --- |
-| `npm test` | パーサー、パス、仮想ストレージ、ファイル操作、UNDO、検索、ゲームロジック |
+| `npm test` | シェル構文、BAT、環境変数、エイリアス、仮想ストレージ、ファイル操作、ゲームロジック |
 | `npm run typecheck` | TypeScriptの型整合性 |
 | `npm run build` | Vite本番ビルド |
-| `npm run test:e2e` | Edge上でコマンド、Vim、MORE、入出力、ゲーム、リサイズを操作 |
+| `npm run test:e2e` | Edge上でシェル自動化、コマンド、Vim、MORE、入出力、ゲーム、リサイズを操作 |
 | `npm run desktop:build` | TauriのWindows releaseビルド |
 | `npm run test:desktop` | 実際のWebView2でデスクトップ版を起動・操作 |
 
-現在の検証結果は、Vitest **80件成功**、Playwright **10件成功**です。
+現在の検証結果は、Vitest **96件成功**、Playwright **12件成功**です。
 
 ## プロジェクト構成
 
@@ -302,7 +381,7 @@ docs/                       実装記録とスクリーンショット
 
 ## 現在の範囲
 
-v0.2.0では、仮想ファイルの作成・編集・削除・コピー・移動・検索・情報表示、UNDO、JSON入出力に対応しています。
+v0.3.0では、仮想ファイル操作に加えて、BAT、複数コマンド、パイプ、リダイレクト、環境変数、エイリアス、ユーザー定義コマンドによる簡単な自動処理に対応しています。
 
 次の機能は今後の対象です。
 

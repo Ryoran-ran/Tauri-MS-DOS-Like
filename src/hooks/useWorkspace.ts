@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { APP_VERSION } from '../app/constants';
 import { executeCommand } from '../features/commands/runner';
+import { ShellSession } from '../features/commands/shellState';
 import { createFileSystem } from '../features/filesystem/filesystem';
 import type { ActiveView, ExecutionStatus, TerminalEntry } from '../types/workspace';
 
 export function useWorkspace() {
   const [fileSystem] = useState(createFileSystem);
+  const [shell] = useState(() => new ShellSession());
   const nextId = useRef(3);
   const executing = useRef(false);
   const [currentDirectory, setCurrentDirectory] = useState('C:\\');
@@ -32,7 +34,7 @@ export function useWorkspace() {
     const entry: TerminalEntry = { id: nextId.current++, kind: 'input', text: input, directory: currentDirectory };
     setTerminalEntries(entries => [...entries, entry]);
     try {
-      const result = await executeCommand(input, { fileSystem, currentDirectory, now: () => new Date() });
+      const result = await executeCommand(input, { fileSystem, shell, currentDirectory, now: () => new Date() });
       const newEntries = result.output.map(text => ({ id: nextId.current++, kind: result.error ? 'error' as const : 'output' as const, text }));
       setTerminalEntries(entries => result.clearTerminal ? newEntries : [...entries, ...newEntries]);
       if (result.currentDirectory !== undefined) setCurrentDirectory(result.currentDirectory);
@@ -49,7 +51,7 @@ export function useWorkspace() {
       executing.current = false;
       setBusy(false);
     }
-  }, [currentDirectory, fileSystem]);
+  }, [currentDirectory, fileSystem, shell]);
 
   const importDrive = useCallback(async (data: string): Promise<string | null> => {
     setBusy(true);
@@ -88,7 +90,7 @@ export function useWorkspace() {
     setActiveView(current => current === view ? 'terminal' : current);
   }, []);
 
-  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, runCommand, importDrive, exitGame, navigate, closeView };
+  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, shellCommandNames: shell.completionNames(), runCommand, importDrive, exitGame, navigate, closeView };
 }
 
 function downloadFile(fileName: string, content: string, mimeType: string): void {

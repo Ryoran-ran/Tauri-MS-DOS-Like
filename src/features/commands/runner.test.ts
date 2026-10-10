@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createFileSystem } from '../filesystem/filesystem';
 import { commands, completeCommand, searchCommands } from './registry';
 import { executeCommand } from './runner';
+import { ShellSession } from './shellState';
 import type { CommandContext } from './types';
 
-const context = (): CommandContext => ({ fileSystem: createFileSystem(), currentDirectory: 'C:\\', now: () => new Date('2026-10-08T16:05:06Z') });
+const context = (): CommandContext => ({ fileSystem: createFileSystem(), shell: new ShellSession(undefined), currentDirectory: 'C:\\', now: () => new Date('2026-10-08T16:05:06Z') });
 
 describe('command execution', () => {
   it('HELP uses shared command definitions and supports detailed help', async () => {
@@ -13,7 +14,7 @@ describe('command execution', () => {
     expect((await executeCommand('HELP CHDIR', context())).output.join('\n')).toContain('CD [パス]');
   });
   it('executes basic commands and aliases', async () => {
-    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.2.0']);
+    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.3.0']);
     expect((await executeCommand('echo "こんにちは 世界"', context())).output).toEqual(['こんにちは 世界']);
     expect((await executeCommand('ECHO', context())).output).toEqual(['']);
     expect((await executeCommand('clear', context())).clearTerminal).toBe(true);
@@ -90,6 +91,75 @@ describe('command execution', () => {
     expect((await executeCommand('DATE', context())).output).toEqual(['現在の日付 (JST): 2026/10/09']);
     expect((await executeCommand('TIME', context())).output).toEqual(['現在の時刻 (JST): 1:05:06']);
   });
+  it('runs conditional command chains with directory changes', async () => {
+    const ctx = context();
+    const result = await executeCommand('CD DOCS && DIR', ctx);
+    expect(result.currentDirectory).toBe('C:\\DOCS');
+    expect(result.output.join('\n')).toContain('COMMANDS.TXT');
+    const failed = await executeCommand('CD MISSING && ECHO SHOULD-NOT-RUN', ctx);
+    expect(failed.error).toBe(true);
+    expect(failed.output.join('\n')).not.toContain('SHOULD-NOT-RUN');
+  });
+  it('redirects and appends command output to virtual files', async () => {
+    const ctx = context();
+    expect((await executeCommand('ECHO hello > NOTE.TXT', ctx)).output).toEqual([]);
+    expect(await ctx.fileSystem.readTextFile('NOTE.TXT', 'C:\\')).toBe('hello');
+    await executeCommand('ECHO world >> NOTE.TXT', ctx);
+    expect(await ctx.fileSystem.readTextFile('NOTE.TXT', 'C:\\')).toBe('hello\nworld');
+  });
+  it('pipes command output into FIND', async () => {
+    const result = await executeCommand('DIR | FIND ".TXT"', context());
+    expect(result.output.some(line => line.includes('README.TXT'))).toBe(true);
+    expect(result.output.every(line => line.toUpperCase().includes('.TXT'))).toBe(true);
+  });
+  it('sets, expands, lists and removes environment variables', async () => {
+    const ctx = context();
+    expect((await executeCommand('SET NAME=RETRODOS', ctx)).output).toEqual(['NAME=RETRODOS']);
+    expect((await executeCommand('ECHO %NAME%', ctx)).output).toEqual(['RETRODOS']);
+    expect((await executeCommand('SET NA', ctx)).output).toEqual(['NAME=RETRODOS']);
+    await executeCommand('SET NAME=', ctx);
+    expect((await executeCommand('ECHO [%NAME%]', ctx)).output).toEqual(['[]']);
+  });
+  it('creates command aliases and user-defined commands with arguments', async () => {
+    const ctx = context();
+    await executeCommand('ALIAS LL=DIR', ctx);
+    expect((await executeCommand('LL DOCS', ctx)).output.join('\n')).toContain('COMMANDS.TXT');
+    await executeCommand('DEF GREET=ECHO Hello %1', ctx);
+    expect((await executeCommand('GREET "Retro DOS"', ctx)).output).toEqual(['Hello Retro DOS']);
+    await executeCommand('SET WHO=first', ctx);
+    await executeCommand('DEF SHOW=ECHO %WHO%', ctx);
+    await executeCommand('SET WHO=second', ctx);
+    expect((await executeCommand('SHOW', ctx)).output).toEqual(['second']);
+    await executeCommand('DEF BUILD="ECHO %1 > RESULT.TXT && TYPE RESULT.TXT"', ctx);
+    expect((await executeCommand('BUILD release', ctx)).output).toEqual(['release']);
+    expect(await ctx.fileSystem.readTextFile('RESULT.TXT', 'C:\\')).toBe('release');
+    expect(completeCommand('G', ctx.shell.completionNames())).toContain('GREET');
+  });
+  it('runs BAT files through CALL and direct invocation', async () => {
+    const ctx = context();
+    await ctx.fileSystem.writeTextFile('BUILD.BAT', 'C:\\', [
+      '@ECHO OFF',
+      'REM v0.3 batch test',
+      'SET PROJECT=%1',
+      'ECHO Project=%PROJECT% > BUILD.TXT',
+      'TYPE BUILD.TXT',
+    ].join('\n'));
+    expect((await executeCommand('CALL BUILD test', ctx)).output).toEqual(['PROJECT=test', 'Project=test']);
+    expect((await executeCommand('BUILD.BAT direct', ctx)).output).toEqual(['PROJECT=direct', 'Project=direct']);
+    expect(await ctx.fileSystem.readTextFile('BUILD.TXT', 'C:\\')).toBe('Project=direct');
+    await ctx.fileSystem.writeTextFile('FAIL.BAT', 'C:\\', 'ECHO before\nCD MISSING\nECHO after');
+    const failed = await executeCommand('FAIL.BAT', ctx);
+    expect(failed.error).toBe(true);
+    expect(failed.output.join('\n')).toContain('[C:\\FAIL.BAT:2]');
+    expect(failed.output.join('\n')).not.toContain('after');
+  });
+  it('stops recursive aliases and BAT files safely', async () => {
+    const ctx = context();
+    await executeCommand('ALIAS LOOP=LOOP', ctx);
+    expect((await executeCommand('LOOP', ctx)).error).toBe(true);
+    await ctx.fileSystem.writeTextFile('LOOP.BAT', 'C:\\', 'CALL LOOP.BAT');
+    expect((await executeCommand('LOOP.BAT', ctx)).output.join('\n')).toContain('再帰呼び出し');
+  });
   it.each(['TYPE', 'TYPE ""', 'MKDIR', 'DEL', 'RMDIR', 'RMDIR /S', 'COPY ONE', 'REN ONE', 'MOVE ONE', 'FIND', 'MORE', 'STAT', 'PWD EXTRA', 'IMPORT EXTRA', 'CLS unexpected', 'RUN', 'DIR DOCS SYSTEM', 'ECHO "unclosed'])('handles invalid input %s', async input => {
     expect((await executeCommand(input, context())).error).toBe(true);
   });
@@ -109,13 +179,13 @@ describe('shared command discovery', () => {
   it('searches names, Japanese descriptions and aliases without case sensitivity', () => {
     expect(searchCommands('hElP').map(command => command.name)).toEqual(['HELP']);
     expect(searchCommands('ディレクトリ').map(command => command.name)).toEqual(['DIR', 'CD', 'PWD', 'MKDIR']);
-    expect(searchCommands('削除').map(command => command.name)).toEqual(['DEL', 'RMDIR']);
+    expect(searchCommands('削除').map(command => command.name)).toEqual(['SET', 'DEL', 'RMDIR']);
     expect(searchCommands('chdir').map(command => command.name)).toEqual(['CD']);
     expect(searchCommands('no-results')).toEqual([]);
   });
   it('completes names/aliases using the same registry', () => {
     expect(completeCommand('he')).toEqual(['HELP']);
-    expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'CD', 'CHDIR', 'COPY']);
+    expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'COMMAND', 'CALL', 'CD', 'CHDIR', 'COPY']);
     expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE']);
     expect(completeCommand('R')).toEqual(['RMDIR', 'RD', 'REN', 'RENAME', 'RUN']);
     expect(completeCommand('CD DOC')).toEqual([]);

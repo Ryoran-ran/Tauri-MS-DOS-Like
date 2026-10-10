@@ -13,10 +13,17 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const log = page.getByRole('log');
-  await expect(log).toContainText('RetroDOS Version 0.2.0');
+  await expect(log).toContainText('RetroDOS Version 0.3.0');
   await commandInput(page).evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(commandInput(page)).toBeFocused();
+  const cdp = await page.context().newCDPSession(page);
+  await commandInput(page).fill('ve');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
+  await expect(commandInput(page)).toHaveValue('ver');
+  await commandInput(page).press('Enter');
+  await expect(log.locator('.terminal-entry.input').last()).toContainText('ver');
   await run(page, 'HELP');
   await expect(log).toContainText('利用可能なコマンド');
   await run(page, 'DIR');
@@ -40,7 +47,11 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   await run(page, 'ECHO <img src=x onerror=alert(1)>');
   await expect(log).toContainText('<img src=x onerror=alert(1)>');
   await expect(log.locator('img')).toHaveCount(0);
-  await run(page, 'CLS');
+  await commandInput(page).fill('cl');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyS', windowsVirtualKeyCode: 229 });
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Process', code: 'KeyS', windowsVirtualKeyCode: 229 });
+  await expect(commandInput(page)).toHaveValue('cls');
+  await commandInput(page).press('Enter');
   await expect(log).not.toContainText('Welcome to RetroDOS.');
   await expect(log.locator('.terminal-entry')).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -64,7 +75,7 @@ test('search, details and insertion do not execute automatically', async ({ page
   await search.fill('no-results');
   await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
   await search.fill('');
-  await expect(page.locator('.command-item')).toHaveCount(26);
+  await expect(page.locator('.command-item')).toHaveCount(30);
 });
 
 test('file operations support copy, rename, move and deletion', async ({ page }) => {
@@ -90,7 +101,7 @@ test('file operations support copy, rename, move and deletion', async ({ page })
   await expect(page.getByRole('log').locator('.terminal-entry.output').filter({ hasText: '<DIR>        WORK' })).toHaveCount(0);
 });
 
-test('v0.2 commands support discovery, paging, wildcard undo and drive transfer', async ({ page }) => {
+test('file commands support discovery, paging, wildcard undo and drive transfer', async ({ page }) => {
   const log = page.getByRole('log');
   await run(page, 'PWD');
   await expect(log).toContainText('C:\\');
@@ -104,7 +115,7 @@ test('v0.2 commands support discovery, paging, wildcard undo and drive transfer'
   await run(page, 'MORE DOCS\\COMMANDS.TXT');
   const pager = page.getByRole('region', { name: 'MOREページャー' });
   await expect(pager).toBeVisible();
-  await expect(pager).toContainText('RetroDOS v0.2 コマンドガイド');
+  await expect(pager).toContainText('RetroDOS v0.3 コマンドガイド');
   await page.keyboard.press('End');
   await page.keyboard.press('Escape');
   await expect(commandInput(page)).toBeFocused();
@@ -137,6 +148,41 @@ test('v0.2 commands support discovery, paging, wildcard undo and drive transfer'
   await page.reload();
   await run(page, 'TYPE IMPORTED.TXT');
   await expect(page.getByRole('log')).toContainText('import succeeded');
+});
+
+test('v0.3 shell supports chains, redirects, pipes, variables, aliases, definitions and BAT files', async ({ page }) => {
+  const log = page.getByRole('log');
+  await run(page, 'SET NAME=RETRODOS');
+  await run(page, 'ECHO hello > C:\\NOTE.TXT');
+  await run(page, 'TYPE C:\\NOTE.TXT');
+  await expect(log).toContainText('hello');
+
+  await run(page, 'CD DOCS && DIR | FIND ".TXT"');
+  await expect(page.locator('.status-path')).toHaveText('C:\\DOCS');
+  await expect(log).toContainText('COMMANDS.TXT');
+
+  await run(page, 'ALIAS LL=DIR');
+  await run(page, 'LL C:\\SCRIPTS');
+  await expect(log).toContainText('DEMO.BAT');
+  await run(page, 'DEF GREET=ECHO Hello %1');
+  await commandInput(page).fill('GR');
+  await commandInput(page).press('Tab');
+  await expect(commandInput(page)).toHaveValue('GREET ');
+  await run(page, 'GREET user');
+  await expect(log).toContainText('Hello user');
+
+  await page.reload();
+  await run(page, 'ECHO %NAME%');
+  await expect(page.getByRole('log')).toContainText('RETRODOS');
+  await run(page, 'GREET persisted');
+  await expect(page.getByRole('log')).toContainText('Hello persisted');
+  await run(page, 'LL C:\\SCRIPTS');
+  await expect(page.getByRole('log')).toContainText('DEMO.BAT');
+
+  await run(page, 'CALL C:\\SCRIPTS\\DEMO.BAT');
+  await expect(page.getByRole('log')).toContainText('RETRODOS shell is ready');
+  await run(page, 'TYPE C:\\SHELL-DEMO.TXT');
+  await expect(page.getByRole('log')).toContainText('RETRODOS shell is ready');
 });
 
 test('Vim editor supports modal keyboard editing, saving and quitting', async ({ page }) => {
