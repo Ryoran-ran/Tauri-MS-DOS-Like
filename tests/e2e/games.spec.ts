@@ -8,18 +8,20 @@ async function run(page: Page, command: string) {
 }
 test.beforeEach(async ({ page }) => { await page.goto('/'); });
 
-test('game creation prompt copies from the library and command', async ({ page }) => {
+test('game creation consultation prompt copies from the library and command', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await run(page, 'GAMES');
   const library = page.getByRole('region', { name: 'プログラム一覧画面' });
-  await library.getByRole('button', { name: '作成プロンプトをコピー' }).click();
-  await expect(library.getByRole('status')).toContainText('ゲーム作成プロンプトをコピーしました');
+  await library.getByRole('button', { name: 'ゲーム作成を相談' }).click();
+  await expect(library.getByRole('status')).toContainText('ゲーム作成の相談用プロンプトをコピーしました');
   const prompt = await page.evaluate(() => navigator.clipboard.readText());
   expect(prompt).toContain('"format": 必ず "retrodos.game"');
-  expect(prompt).toContain('作りたいゲーム：');
+  expect(prompt).toContain('最初からコードやJSONを出力しないでください');
+  expect(prompt).toContain('v2 Webゲーム');
+  expect(prompt).toContain('UIデザイン');
 
   await run(page, 'GAMEPROMPT');
-  await expect(page.getByRole('log')).toContainText('ゲーム作成プロンプトをクリップボードにコピーしました');
+  await expect(page.getByRole('log')).toContainText('ゲーム作成の相談用プロンプトをクリップボードにコピーしました');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
 });
 
@@ -87,4 +89,27 @@ test('declarative game plugin imports, launches, persists and can be removed', a
   await library.getByRole('button', { name: 'HELLO CAVEを削除' }).click();
   await expect(library.getByRole('article')).toHaveCount(6);
   await run(page, 'RUN CAVE'); await expect(page.getByRole('log')).toContainText('プログラムが見つかりません');
+});
+
+test('web game plugin imports into a sandbox and reports score and achievements', async ({ page }) => {
+  await run(page, 'GAMEIMPORT C:\\GAMES\\PIXEL.RGAME.JSON');
+  await expect(page.getByRole('log')).toContainText('PIXEL — PIXEL CATCH');
+  await run(page, 'RUN PIXEL');
+  const game = page.getByRole('region', { name: 'PIXEL CATCH ゲームプラグイン' });
+  await expect(game).toBeVisible();
+  const frame = page.frameLocator('iframe[title="PIXEL CATCH ゲーム画面"]');
+  const board = frame.getByLabel('PIXEL CATCH盤面');
+  await expect(board).toBeFocused();
+  await board.press('ArrowRight');
+  await board.press('ArrowRight');
+  await expect(frame.getByText('MISSION COMPLETE')).toBeVisible();
+  await expect(game.getByRole('status')).toContainText('MISSION COMPLETE');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').scores?.['plugin.pixel-catch']?.highScore ?? 0)).toBe(100);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').achievements?.some((item: { id?: string }) => item.id === 'first-star') ?? false)).toBe(true);
+  const oldFrameUrl = await page.locator('iframe[title="PIXEL CATCH ゲーム画面"]').getAttribute('src');
+  await game.getByRole('button', { name: 'もう一度' }).click();
+  await expect(page.locator('iframe[title="PIXEL CATCH ゲーム画面"]')).not.toHaveAttribute('src', oldFrameUrl!);
+  await expect(frame.getByText('ARROW KEYS: MOVE @ TO *')).toBeVisible();
+  await board.press('Escape');
+  await expect(page.getByRole('region', { name: 'ターミナル' })).toBeVisible();
 });

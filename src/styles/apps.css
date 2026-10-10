@@ -93,6 +93,30 @@
 .app-summary small { font-size: .8em; }
 .todo-form { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
 .todo-title { flex: 1; min-width: 180px; }
+.dos-date-field { position: relative; min-width: 172px; }
+.dos-date-input { display: flex; min-width: 0; }
+.dos-date-input input { width: 136px; border-right: 0; }
+.dos-date-toggle { display: grid; width: 34px; flex: 0 0 34px; place-items: center; color: #000; background: #c0c0c0; border: 2px solid; border-color: #fff #555 #555 #fff; font: 10px var(--mono); }
+.dos-date-toggle[aria-expanded=true] { color: #fff; background: var(--program-accent); border-color: #555 #fff #fff #555; }
+.dos-date-picker { position: absolute; z-index: 20; top: calc(100% + 5px); left: 0; width: 280px; max-width: calc(100vw - 38px); padding: 4px; color: #fff; background: #c0c0c0; border: 4px double #fff; box-shadow: 7px 7px 0 #0009; font: 11px/1.3 var(--mono); }
+.dos-date-picker header { display: grid; grid-template-columns: 31px minmax(0, 1fr) 31px; align-items: center; min-height: 31px; color: #fff; background: var(--program-accent); }
+.dos-date-picker header strong { text-align: center; }
+.dos-date-picker header button { height: 27px; color: var(--program-highlight); }
+.dos-date-picker header button:hover, .dos-date-picker header button:focus-visible { color: #000; background: var(--program-highlight); outline: 0; }
+.dos-date-weekdays, .dos-date-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.dos-date-weekdays { color: var(--program-highlight); background: #000; border: 2px solid var(--program-accent); border-bottom: 0; }
+.dos-date-weekdays span { padding: 5px 0; text-align: center; }
+.dos-date-grid { padding: 2px; background: #000; border: 2px solid var(--program-accent); border-top: 0; }
+.dos-date-day { height: 29px; min-width: 0; color: #fff; text-align: center; }
+.dos-date-day.outside { color: #777; }
+.dos-date-day.today { color: #ffff55; text-decoration: underline; }
+.dos-date-day:hover, .dos-date-day:focus-visible { color: #000; background: #fff; outline: 0; }
+.dos-date-day[aria-pressed=true] { color: #000; background: var(--program-highlight); }
+.dos-date-picker footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 4px; color: #000; }
+.dos-date-picker footer button { padding: 4px 6px; color: #fff; background: var(--program-accent); }
+.dos-date-picker footer button:hover, .dos-date-picker footer button:focus-visible { color: #000; background: var(--program-highlight); outline: 0; }
+.dos-date-picker footer span { font-size: 8px; }
+.dos-date-picker footer kbd { color: #fff; background: #000; }
 .todo-list, .agenda-list { list-style: none; padding: 0; margin: 0; }
 .todo-list li { display: flex; align-items: center; gap: 10px; padding: 12px 8px; border-top: 1px solid var(--program-line); }
 .todo-list li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -164,7 +188,7 @@
 .app-shell[data-theme=green] { --crt: #80e49c; --crt-dark: #0d2415; --program-bg: #050b07; --program-surface: #0c1a11; --program-accent: #1b4327; --program-line: #346342; }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.workspace,.titlebar,.sidebar,.terminal-view) { background: var(--program-bg); color: var(--crt); border-color: var(--program-line); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.workspace-tab-strip,.workspace-tabs,.statusbar,.sidebar-heading,.command-group h3,.terminal-panel-header) { background: var(--program-accent); color: var(--crt); border-color: var(--program-line); }
-.app-shell:is([data-theme=amber],[data-theme=green]) :is(.brand,.brand-dos,.title-breadcrumb,.environment-label,.execution-status,.status-version,.panel-path,.sidebar-heading h2,.command-group h3 span,.command-item code,.command-item > span,.app-launcher-button,.workspace-tab) { color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) :is(.brand,.brand-dos,.title-breadcrumb,.environment-label,.execution-status,.status-version,.panel-path,.sidebar-heading h2,.command-group-toggle,.command-group-count,.command-item code,.command-item > span,.app-launcher-button,.workspace-tab) { color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.terminal-entry,.terminal-entry.system,.output-prompt,.input-prompt,.terminal-input-form input) { color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.workspace-tab.active,.command-item.selected,.app-launcher-menu button:focus,.app-launcher-menu button:hover) { background: var(--program-accent); color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.app-launcher-menu,.command-details) { background: var(--program-surface); color: var(--crt); border-color: var(--crt); }
@@ -173,6 +197,11 @@
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.app-card h2,.system-banner,.calculator-history strong,.agenda-list time,.markdown-document a) { color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) .workspace-tab:hover { background: var(--program-accent); color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) .builtin-view :is(input,select,textarea):focus-visible { outline-color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .dos-date-toggle { color: var(--crt); background: var(--program-surface); border-color: var(--program-line); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .dos-date-picker { color: var(--crt); background: var(--program-surface); border-color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .dos-date-day { color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .dos-date-day.outside { color: var(--program-line); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .dos-date-day[aria-pressed=true] { color: var(--program-bg); background: var(--crt); }
 
 /* v0.5 game environment */
 .program-plugin-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin: -4px 0 8px; color: #fff; font: 9px var(--mono); }
@@ -240,9 +269,24 @@
 .story-ending { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 11px; padding: 10px; color: #fff; background: #008000; }
 .story-ending.lose { background: #aa0000; }
 .story-window footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 10px; font-size: 9px; }
+.web-plugin-game { background: var(--program-bg); color: var(--program-text); }
+.web-game-window { width: min(900px, 100%); margin: 12px auto 0; padding: 12px; color: var(--program-text); background: var(--program-surface); border: 4px double #fff; box-shadow: 8px 8px 0 #000; font: var(--app-font-size, 13px)/1.5 var(--mono); }
+.web-game-window > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 10px; }
+.web-game-window h1 { color: var(--program-accent); font: 700 25px/1.1 var(--mono); }
+.web-game-window .eyebrow { color: var(--program-accent); }
+.web-game-frame { display: grid; width: 100%; max-height: calc(100vh - 245px); aspect-ratio: var(--web-game-ratio); margin: auto; overflow: hidden; background: var(--web-game-background); border: 4px double var(--program-line); }
+.web-game-frame iframe { width: 100%; height: 100%; background: var(--web-game-background); border: 0; }
+.web-game-frame.pixel iframe { image-rendering: pixelated; }
+.web-game-window > footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 8px; font-size: 9px; }
+.web-game-error { margin-top: 8px; padding: 7px; color: #fff; background: #aa0000; }
+.web-game-result { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; padding: 7px 10px; color: #fff; background: #008000; }
+.web-game-result.lose { background: #aa0000; }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.arcade-game,.story-game) { background: var(--program-bg); color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.arcade-window,.story-window) { color: var(--crt); background: var(--program-surface); border-color: var(--crt); }
 .app-shell:is([data-theme=amber],[data-theme=green]) :is(.arcade-window h1,.arcade-window .eyebrow,.story-window h1,.story-window .eyebrow) { color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .web-plugin-game { background: var(--program-bg); color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) .web-game-window { color: var(--crt); background: var(--program-surface); border-color: var(--crt); }
+.app-shell:is([data-theme=amber],[data-theme=green]) :is(.web-game-window h1,.web-game-window .eyebrow) { color: var(--crt); }
 @media (max-width: 1000px) { .calendar-layout { grid-template-columns: minmax(0, 1fr); } .calendar-day { height: 70px; } .system-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .builtin-view { padding: 6px 6px 10px; } .builtin-body { padding: 12px; } .app-columns, .settings-grid, .calculator-layout { grid-template-columns: minmax(0, 1fr); } .calendar-day { height: 62px; padding: 4px; } .calendar-day small { font-size: 8px; } .todo-list li { flex-wrap: wrap; } .todo-list li > div { flex-basis: calc(100% - 40px); } .markdown-document { padding: 12px; } .file-address { flex-wrap: wrap; } .file-address > input { min-width: 110px; } .arcade-window,.story-window { padding: 11px; } .arcade-window > header,.story-window > header { flex-direction: column; gap: 8px; } .game-stats { justify-content: flex-start; } }
+@media (max-width: 720px) { .builtin-view { padding: 6px 6px 10px; } .builtin-body { padding: 12px; } .app-columns, .settings-grid, .calculator-layout { grid-template-columns: minmax(0, 1fr); } .calendar-day { height: 62px; padding: 4px; } .calendar-day small { font-size: 8px; } .todo-list li { flex-wrap: wrap; } .todo-list li > div { flex-basis: calc(100% - 40px); } .markdown-document { padding: 12px; } .file-address { flex-wrap: wrap; } .file-address > input { min-width: 110px; } .arcade-window,.story-window,.web-game-window { padding: 11px; } .arcade-window > header,.story-window > header,.web-game-window > header { flex-direction: column; gap: 8px; } .game-stats { justify-content: flex-start; } .web-game-frame { max-height: calc(100vh - 285px); } }
 @media (max-width: 440px) { .app-launcher-button { padding: 0 9px; } .app-launcher-button span { display: none; } .builtin-titlebar > code { display: none; } .builtin-titlebar > button { margin-left: auto; } .builtin-footer { font-size: 9px; } .calendar-navigation h2 { font-size: 13px; } .calendar-layout { gap: 12px; } .system-metrics > div { padding: 10px; } .system-metrics strong { font-size: 18px; } }

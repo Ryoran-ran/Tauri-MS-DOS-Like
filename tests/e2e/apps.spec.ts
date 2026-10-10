@@ -77,7 +77,12 @@ test('ToDo deadlines appear in calendar and both programs preserve edits after r
   await run(page, 'TODO');
   const todo = page.getByRole('region', { name: 'ToDoリスト', exact: true });
   await todo.getByLabel('タスク名', { exact: true }).fill('資料を書く');
-  await todo.getByLabel('タスクの期限').fill(today);
+  await todo.getByRole('button', { name: '期限の日付を選択' }).click();
+  const datePicker = todo.getByRole('dialog', { name: '期限の日付選択' });
+  await expect(datePicker).toBeVisible();
+  await expect(datePicker).toHaveCSS('background-color', 'rgb(192, 192, 192)');
+  await datePicker.getByRole('button', { name: '今日', exact: true }).click();
+  await expect(todo.getByLabel('タスクの期限')).toHaveValue(today);
   await todo.getByLabel('タスクの優先度').selectOption('high');
   await todo.getByRole('button', { name: '追加', exact: true }).click();
   await todo.getByRole('button', { name: '資料を書くを編集', exact: true }).click();
@@ -275,7 +280,7 @@ test('settings persist and change colors, font, calendar and scrolling; system i
   const system = page.getByRole('region', { name: 'システム情報', exact: true });
   await expect(system).toContainText('Version 0.5.0');
   await expect(system.locator('.system-metrics').first()).toContainText('bytes');
-  await expect(system).toContainText('46');
+  await expect(system).toContainText('47');
   await page.getByRole('tab', { name: '設定', exact: true }).click();
   await settings.getByRole('button', { name: '設定を初期値に戻す' }).click();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dos');

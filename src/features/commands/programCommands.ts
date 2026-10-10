@@ -24,10 +24,10 @@ export const programCommands: CommandDefinition[] = [
     execute: () => ({ output: ['プログラム一覧（ゲーム）を開きました。'], activeView: 'program-library', programFilter: 'games' }),
   },
   {
-    name: 'GAMEPROMPT', displayName: 'ゲーム作成プロンプトをコピー', aliases: [], category: 'programs',
-    description: '分岐型ゲームのJSONをAIに作成してもらうためのプロンプトをクリップボードにコピーします。',
+    name: 'GAMEPROMPT', displayName: 'ゲーム作成を相談', aliases: [], category: 'programs',
+    description: 'ジャンル、操作、UI、インポート形式をAIと順番に相談するプロンプトをコピーします。分岐型と自由なWebゲームに対応します。',
     usage: 'GAMEPROMPT', examples: ['GAMEPROMPT'], arguments: [],
-    execute: () => ({ output: [], clipboardText: gameCreationPrompt }),
+    execute: () => ({ output: ['ゲーム作成の相談用プロンプトをコピーします。AIとの会話へ貼り付けてください。'], clipboardText: gameCreationPrompt }),
   },
   {
     name: 'RUN', displayName: 'プログラムを起動', aliases: [], category: 'programs',
@@ -47,17 +47,17 @@ export const programCommands: CommandDefinition[] = [
   },
   {
     name: 'GAMEIMPORT', displayName: 'ゲーム追加', aliases: ['GAMEADD'], category: 'programs',
-    description: '仮想ドライブ上のretrodos.game形式JSONを検証し、ゲーム一覧へ追加します。HTMLやスクリプトは実行しません。',
-    usage: 'GAMEIMPORT <JSONファイル>', examples: ['GAMEIMPORT C:\\GAMES\\MYGAME.JSON'],
+    description: '仮想ドライブ上のretrodos.game形式JSONを検証し、ゲーム一覧へ追加します。v1分岐型とv2隔離Webゲームに対応します。',
+    usage: 'GAMEIMPORT <JSONファイル>', examples: ['GAMEIMPORT C:\\GAMES\\MYGAME.RGAME.JSON', 'GAMEIMPORT C:\\GAMES\\PIXEL.RGAME.JSON'],
     arguments: [{ name: 'JSONファイル', description: 'ゲームプラグイン定義の仮想ファイルパス', required: true }],
     execute: async (args, context) => {
       const source = await context.fileSystem.readTextFile(args[0]!, context.currentDirectory);
-      if (source.length > 256_000) return { error: true, output: ['ゲームプラグインは256KB以下にしてください。'] };
+      if (new TextEncoder().encode(source).length > 256_000) return { error: true, output: ['ゲームプラグインは256KB以下にしてください。'] };
       let value: unknown;
       try { value = JSON.parse(source); } catch { return { error: true, output: ['ゲームプラグインのJSONを読み取れません。'] }; }
       const plugin = parseGamePlugin(value);
       if (programCatalog.some(program => program.code === plugin.code || program.aliases.includes(plugin.code))) return { error: true, output: [`標準プログラムとコードが重複しています: ${plugin.code}`] };
-      return { output: [`ゲームプラグインを追加しました: ${plugin.code} — ${plugin.name}`, `RUN ${plugin.code} で起動できます。`], gamePluginInstall: plugin };
+      return { output: [`ゲームプラグイン v${plugin.manifestVersion} を追加しました: ${plugin.code} — ${plugin.name}`, `RUN ${plugin.code} で起動できます。`], gamePluginInstall: plugin };
     },
   },
 ];

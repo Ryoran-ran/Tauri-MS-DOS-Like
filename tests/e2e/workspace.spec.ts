@@ -72,10 +72,28 @@ test('search, details and insertion do not execute automatically', async ({ page
   await expect(commandInput(page)).toHaveValue('TYPE ');
   await expect(commandInput(page)).toBeFocused();
   await expect(page.locator('.terminal-entry')).toHaveCount(initialCount);
+  await details.getByRole('button', { name: 'コマンド一覧へ' }).click();
   await search.fill('no-results');
   await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
   await search.fill('');
-  await expect(page.locator('.command-item')).toHaveCount(46);
+  await expect(page.getByRole('button', { name: /基本操作/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /ファイル操作/ })).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('command guide uses collapsible categories and runs commands without arguments', async ({ page }) => {
+  const fileCategory = page.getByRole('button', { name: /ファイル操作/ });
+  await fileCategory.click();
+  await expect(fileCategory).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /DIR ファイル一覧/ })).toBeVisible();
+
+  const search = page.getByRole('textbox', { name: 'コマンドを検索' });
+  await search.fill('ver');
+  await page.getByRole('button', { name: /VER バージョン/ }).click();
+  const details = page.getByRole('region', { name: 'VERの詳細' });
+  await expect(search).toBeHidden();
+  await details.getByRole('button', { name: '実行する' }).click();
+  await expect(page.getByRole('log')).toContainText('RetroDOS Version 0.5.0');
+  await expect(search).toBeVisible();
 });
 
 test('file operations support copy, rename, move and deletion', async ({ page }) => {

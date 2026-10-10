@@ -5,7 +5,7 @@ const DIRECTORY_PERSISTENCE_KEY = 'retrodos.virtual-directories.v1';
 const WORKSPACE_PERSISTENCE_KEY = 'retrodos.virtual-workspace.v2';
 const HISTORY_PERSISTENCE_KEY = 'retrodos.virtual-history.v1';
 const SEED_VERSION_KEY = 'retrodos.virtual-seed-version';
-const CURRENT_SEED_VERSION = 5;
+const CURRENT_SEED_VERSION = 6;
 const MAX_HISTORY_CHARACTERS = 2_000_000;
 
 export interface KeyValueStorage {
@@ -47,13 +47,13 @@ export class MemoryStorage implements FileSystemStorage {
   private migrateSeed(seed: DirectoryNode, hasSnapshot: boolean): void {
     if (!this.persistence) return;
     const savedVersion = Number(this.persistence.getItem(SEED_VERSION_KEY) ?? 0);
-    if (hasSnapshot && savedVersion < 5) {
+    if (hasSnapshot && savedVersion < CURRENT_SEED_VERSION) {
       const seedGames = seed.children.find(node => node.kind === 'directory' && node.name.toUpperCase() === 'GAMES');
       let games = this.root.children.find(node => node.kind === 'directory' && node.name.toUpperCase() === 'GAMES');
       if (!games && seedGames?.kind === 'directory') { games = { kind: 'directory', name: 'GAMES', children: [] }; this.root.children.push(games); }
       if (games?.kind === 'directory' && seedGames?.kind === 'directory') {
-        const example = seedGames.children.find(node => node.name.toUpperCase() === 'EXAMPLE.RGAME.JSON');
-        if (example && !games.children.some(node => node.name.toUpperCase() === example.name.toUpperCase())) games.children.push(structuredClone(example));
+        const additions = seedGames.children.filter(node => node.name.toUpperCase() === 'PIXEL.RGAME.JSON' || (savedVersion < 5 && node.name.toUpperCase() === 'EXAMPLE.RGAME.JSON'));
+        for (const addition of additions) if (!games.children.some(node => node.name.toUpperCase() === addition.name.toUpperCase())) games.children.push(structuredClone(addition));
       }
       this.persistence.setItem(WORKSPACE_PERSISTENCE_KEY, JSON.stringify(this.root));
     }

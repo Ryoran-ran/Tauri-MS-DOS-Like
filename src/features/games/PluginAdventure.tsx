@@ -1,10 +1,10 @@
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GameStats, useGameProfile } from './gameProfile';
-import type { GamePluginManifest, StoryChoice } from './gamePlugin';
+import type { StoryChoice, StoryGamePluginManifest } from './gamePlugin';
 import type { GameProps } from './GuessGame';
 
-interface Props extends GameProps { manifest: GamePluginManifest; external?: boolean }
+interface Props extends GameProps { manifest: StoryGamePluginManifest; external?: boolean }
 export function PluginAdventure({ active, onExit, manifest, external = false }: Props) {
   const [sceneId, setSceneId] = useState(manifest.start); const [score, setScore] = useState(0);
   const [inventory, setInventory] = useState<string[]>([]); const [history, setHistory] = useState<string[]>([]);

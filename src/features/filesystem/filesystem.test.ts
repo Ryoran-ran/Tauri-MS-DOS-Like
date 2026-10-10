@@ -23,7 +23,7 @@ describe('DOS path resolution', () => {
 });
 
 describe('virtual filesystem', () => {
-  it('adds the v0.5 game example to an older saved drive without replacing user files', async () => {
+  it('adds the game examples to an older saved drive without replacing user files', async () => {
     const values = new Map<string, string>();
     values.set('retrodos.virtual-workspace.v2', JSON.stringify({ kind: 'directory', name: 'C:', children: [
       { kind: 'directory', name: 'GAMES', children: [{ kind: 'file', name: 'USER.TXT', content: 'keep me' }] },
@@ -32,7 +32,20 @@ describe('virtual filesystem', () => {
     const fs = createFileSystem(storage);
     expect(await fs.readTextFile('C:\\GAMES\\USER.TXT', 'C:\\')).toBe('keep me');
     expect(await fs.readTextFile('C:\\GAMES\\EXAMPLE.RGAME.JSON', 'C:\\')).toContain('retrodos.game');
-    expect(values.get('retrodos.virtual-seed-version')).toBe('5');
+    expect(await fs.readTextFile('C:\\GAMES\\PIXEL.RGAME.JSON', 'C:\\')).toContain('"manifestVersion": 2');
+    expect(values.get('retrodos.virtual-seed-version')).toBe('6');
+  });
+  it('adds only the new Web game sample to a v0.5 drive', async () => {
+    const values = new Map<string, string>();
+    values.set('retrodos.virtual-seed-version', '5');
+    values.set('retrodos.virtual-workspace.v2', JSON.stringify({ kind: 'directory', name: 'C:', children: [
+      { kind: 'directory', name: 'GAMES', children: [{ kind: 'file', name: 'USER.TXT', content: 'keep me' }] },
+    ] }));
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    const fs = createFileSystem(storage);
+    expect(await fs.readTextFile('C:\\GAMES\\PIXEL.RGAME.JSON', 'C:\\')).toContain('"manifestVersion": 2');
+    await expect(fs.readTextFile('C:\\GAMES\\EXAMPLE.RGAME.JSON', 'C:\\')).rejects.toThrow('ファイルが見つかりません');
+    expect(values.get('retrodos.virtual-seed-version')).toBe('6');
   });
   it('lists the initial root and reads relative/absolute text files', async () => {
     const fs = createFileSystem();

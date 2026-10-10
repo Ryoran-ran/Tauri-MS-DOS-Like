@@ -50,7 +50,7 @@ export function useWorkspace() {
       let clipboardMessage = '';
       let clipboardError = '';
       if (result.clipboardText !== undefined) {
-        try { await copyTextToClipboard(result.clipboardText); clipboardMessage = 'ゲーム作成プロンプトをクリップボードにコピーしました。'; }
+        try { await copyTextToClipboard(result.clipboardText); clipboardMessage = 'ゲーム作成の相談用プロンプトをクリップボードにコピーしました。'; }
         catch (error) { clipboardError = error instanceof Error ? error.message : 'クリップボードにコピーできませんでした。'; }
       }
       const failed = Boolean(result.error || installationError || clipboardError);

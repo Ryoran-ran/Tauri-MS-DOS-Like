@@ -160,6 +160,7 @@ npm run tauri -- build
 | `GUESS` / `SNAKE` / `MINES` | `SNAKE` | 内蔵ゲームを直接起動 |
 | `BLOCKS` / `ADVENTURE` / `ROGUE` | `BLOCKS` | 内蔵ゲームを直接起動 |
 | `GAMEIMPORT` | `GAMEIMPORT C:\GAMES\EXAMPLE.RGAME.JSON` | JSONゲームプラグインを追加 |
+| `GAMEPROMPT` | `GAMEPROMPT` | ジャンル・操作・UI・形式をAIと相談するプロンプトをコピー |
 | `DATE` | `DATE` | 現在の日付をJSTで表示 |
 | `TIME` | `TIME` | 現在の時刻をJSTで表示 |
 
@@ -419,7 +420,7 @@ EXPORT MY-DRIVE.JSON
 
 ハイスコア、直近スコア、プレイ回数、勝利数、解除した実績を`retrodos.games.v1`へ自動保存します。ゲーム一覧の「スコア・実績」で全記録を確認できます。
 
-外部ゲームは、スクリプトを含まない宣言型JSONとして追加できます。実PCのJSONはゲーム一覧の「ゲーム追加」、仮想ドライブのJSONは`GAMEIMPORT`で取り込みます。標準の`C:\GAMES\EXAMPLE.RGAME.JSON`を取り込むと、サンプルの`CAVE`を`RUN CAVE`で起動できます。作成時は`GAMEPROMPT`またはゲーム一覧のボタンで[ゲーム作成プロンプト](docs/GAME-CREATION-PROMPT.md)をコピーできます。形式は[ゲームプラグインガイド](docs/GAME-PLUGINS.md)、[JSON Schema](docs/game.schema.json)、[サンプル](examples/games/hello-cave/game.json)を参照してください。
+外部ゲームは1つの`.RGAME.JSON`として追加できます。v1はスクリプトを使わない分岐型、v2はHTML・CSS・JavaScriptでアクションやパズルなども作れる隔離Webゲーム形式です。実PCのJSONはゲーム一覧の「ゲーム追加」、仮想ドライブのJSONは`GAMEIMPORT`で取り込みます。`C:\GAMES\EXAMPLE.RGAME.JSON`は分岐型の`CAVE`、`C:\GAMES\PIXEL.RGAME.JSON`はキーボードゲームの`PIXEL`です。作成時は`GAMEPROMPT`またはゲーム一覧の「ゲーム作成を相談」で[相談用プロンプト](docs/GAME-CREATION-PROMPT.md)をコピーできます。ジャンル、操作、UIデザイン、インポート形式をAIと決めてから生成します。形式は[ゲームプラグインガイド](docs/GAME-PLUGINS.md)、[JSON Schema](docs/game.schema.json)、[v1サンプル](examples/games/hello-cave/game.json)、[v2サンプル](examples/games/pixel-catch/game.json)を参照してください。
 
 ![RetroDOSのプログラム一覧](docs/screenshots/programs.png)
 
@@ -427,7 +428,7 @@ EXPORT MY-DRIVE.JSON
 
 標準15プログラムも個別の`program.json`で定義し、同じカタログから登録します。表示名・分類・コード・別名・起動先をアプリとゲームで共有しています。
 
-汎用の外部WebプログラムはHTML・CSS・JavaScriptを含むパッケージを取り込む方針です。[定義形式と今後の実装段階](docs/PROGRAMS.md)、[JSON Schema](docs/program.schema.json)、[外部プログラムの雛形](examples/programs/hello/)を用意しました。現在は定義の共通化までで、外部Webパッケージの取り込み・実行は今後の機能です。ゲーム向けの安全な宣言型JSONはv0.5で取り込み・実行に対応しています。
+汎用の外部WebプログラムはHTML・CSS・JavaScriptを含む複数ファイルのパッケージとして取り込む方針です。[定義形式と今後の実装段階](docs/PROGRAMS.md)、[JSON Schema](docs/program.schema.json)、[外部プログラムの雛形](examples/programs/hello/)を用意しました。汎用プログラムの取り込みは今後の機能です。ゲームは先行して、単一JSONのv1分岐型とv2隔離Webゲームを取り込み・実行できます。
 
 ## テストと検証
 

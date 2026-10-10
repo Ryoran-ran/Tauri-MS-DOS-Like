@@ -1,6 +1,6 @@
-import type { GamePluginManifest } from './gamePlugin';
+import type { StoryGamePluginManifest } from './gamePlugin';
 
-export const builtinAdventure: GamePluginManifest = {
+export const builtinAdventure: StoryGamePluginManifest = {
   format: 'retrodos.game', manifestVersion: 1, id: 'adventure', code: 'ADVENTURE', name: 'LOST TERMINAL',
   description: '停止した地下端末から脱出する短編テキストアドベンチャー', version: '0.5.0', author: 'RetroDOS', start: 'boot',
   scenes: [

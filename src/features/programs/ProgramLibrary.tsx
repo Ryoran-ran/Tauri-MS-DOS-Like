@@ -25,12 +25,13 @@ export function ProgramLibrary({ active, initialFilter, onLaunch, onBack }: Prop
   const pluginInput = useRef<HTMLInputElement>(null);
   const plugins = useGamePlugins();
   const gameProfile = useGameProfile();
-  const pluginPrograms: Array<ProgramManifest & { pluginId: string }> = plugins.map(plugin => ({
+  const pluginPrograms: Array<ProgramManifest & { pluginId: string; pluginFormat: string }> = plugins.map(plugin => ({
     format: 'retrodos.program', manifestVersion: 1, id: plugin.id, code: plugin.code, name: plugin.name,
     description: plugin.description, version: plugin.version, category: 'games', icon: 'adventure', order: 1000,
-    aliases: [], argument: { kind: 'none' }, entry: { runtime: 'web', path: 'story.html' }, pluginId: plugin.id,
+    aliases: [], argument: { kind: 'none' }, entry: { runtime: 'web', path: 'game.html' }, pluginId: plugin.id,
+    pluginFormat: plugin.manifestVersion === 2 ? 'ゲームプラグイン / Web v2' : 'ゲームプラグイン / 分岐型 v1',
   }));
-  const programs: Array<ProgramManifest & { pluginId?: string }> = [...filterPrograms(filter), ...(filter === 'all' || filter === 'games' ? pluginPrograms : [])];
+  const programs: Array<ProgramManifest & { pluginId?: string; pluginFormat?: string }> = [...filterPrograms(filter), ...(filter === 'all' || filter === 'games' ? pluginPrograms : [])];
   useEffect(() => { if (active) selectorRef.current?.focus(); }, [active]);
   useEffect(() => { if (active) cardRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' }); }, [active, selectedIndex]);
   const launch = (index: number) => {
@@ -64,12 +65,12 @@ export function ProgramLibrary({ active, initialFilter, onLaunch, onBack }: Prop
       if (findProgram(parsed.code)) throw new Error(`標準プログラムとコードが重複しています: ${parsed.code}`);
       const plugin = installGamePlugin(parsed);
       if (filter !== 'games' && filter !== 'all') setFilter('games');
-      setQuery(''); setError(''); setNotice(`${plugin.code} を追加しました。`);
+      setQuery(''); setError(''); setNotice(`${plugin.code}（v${plugin.manifestVersion}）を追加しました。`);
     } catch (cause) { setNotice(''); setError(cause instanceof Error ? cause.message : 'ゲームプラグインを追加できませんでした。'); }
     if (pluginInput.current) pluginInput.current.value = '';
   };
   const copyPrompt = async () => {
-    try { await copyTextToClipboard(gameCreationPrompt); setError(''); setNotice('ゲーム作成プロンプトをコピーしました。'); }
+    try { await copyTextToClipboard(gameCreationPrompt); setError(''); setNotice('ゲーム作成の相談用プロンプトをコピーしました。'); }
     catch (cause) { setNotice(''); setError(cause instanceof Error ? cause.message : 'クリップボードにコピーできませんでした。'); }
   };
   return <section className="library-view program-library" aria-label="プログラム一覧画面" hidden={!active} onKeyDown={event => {
@@ -82,7 +83,7 @@ export function ProgramLibrary({ active, initialFilter, onLaunch, onBack }: Prop
         setFilter(category.id); setSelectedIndex(0); setQuery(''); setError(''); setNotice('');
       }}>{category.label}<span>{filterPrograms(category.id).length + (category.id === 'all' || category.id === 'games' ? plugins.length : 0)}</span></button>)}
     </div>
-    {(filter === 'all' || filter === 'games') && <div className="program-plugin-actions"><input ref={pluginInput} className="sr-only" type="file" accept=".json,.rgame.json,application/json" aria-label="ゲームプラグインJSON" onChange={event => { void importPlugin(event.target.files?.[0]); }} /><button className="program-import-button" type="button" onClick={() => { void copyPrompt(); }}><Copy size={14} />作成プロンプトをコピー</button><button className="program-import-button" type="button" onClick={() => pluginInput.current?.click()}><Download size={14} />ゲーム追加</button><span>retrodos.game JSON</span></div>}
+    {(filter === 'all' || filter === 'games') && <div className="program-plugin-actions"><input ref={pluginInput} className="sr-only" type="file" accept=".json,.rgame.json,application/json" aria-label="ゲームプラグインJSON" onChange={event => { void importPlugin(event.target.files?.[0]); }} /><button className="program-import-button" type="button" onClick={() => { void copyPrompt(); }}><Copy size={14} />ゲーム作成を相談</button><button className="program-import-button" type="button" onClick={() => pluginInput.current?.click()}><Download size={14} />ゲーム追加</button><span>retrodos.game v1 / v2</span></div>}
     <div className="library-selector-panel">
       <form className="library-selector-form" onSubmit={event => { event.preventDefault(); launchFromQuery(); }}>
         <label htmlFor="program-selector">RUN&gt;</label>
@@ -105,7 +106,7 @@ export function ProgramLibrary({ active, initialFilter, onLaunch, onBack }: Prop
         else handleArrows(event, true);
       }}>
         <div className="program-art" aria-hidden="true"><span>[{String(index + 1).padStart(2, '0')}]</span><Icon size={38} /><code>{program.code}</code></div>
-        <div className="game-card-body"><div className="game-tags"><span>{category.label}</span><span>{program.pluginId ? 'ゲームプラグイン' : '標準プログラム'}</span></div><h3>{program.name}</h3><p>{program.description}</p>{program.category === 'games' && (() => { const id = program.pluginId ? `plugin.${program.pluginId}` : program.entry.runtime === 'builtin' ? program.entry.module : program.id; const saved = gameProfile.scores[id]; return <div className="program-score"><span>HI {saved?.highScore ?? 0}</span><span>PLAY {saved?.plays ?? 0}</span><span>ACH {gameProfile.achievements.filter(item => item.gameId === id).length}</span></div>; })()}<div className="game-card-footer"><code>RUN {program.code}</code><div className="program-card-actions">{program.pluginId && <button className="button secondary" aria-label={`${program.name}を削除`} onClick={event => { event.stopPropagation(); removeGamePlugin(program.pluginId!); setSelectedIndex(0); setError(''); setNotice(`${program.code} を削除しました。`); }}><Trash2 size={13} /></button>}<button className="button primary" onClick={event => { event.stopPropagation(); launch(index); }}><Play size={13} />起動<ArrowRight size={13} /></button></div></div></div>
+        <div className="game-card-body"><div className="game-tags"><span>{category.label}</span><span>{program.pluginFormat ?? (program.pluginId ? 'ゲームプラグイン' : '標準プログラム')}</span></div><h3>{program.name}</h3><p>{program.description}</p>{program.category === 'games' && (() => { const id = program.pluginId ? `plugin.${program.pluginId}` : program.entry.runtime === 'builtin' ? program.entry.module : program.id; const saved = gameProfile.scores[id]; return <div className="program-score"><span>HI {saved?.highScore ?? 0}</span><span>PLAY {saved?.plays ?? 0}</span><span>ACH {gameProfile.achievements.filter(item => item.gameId === id).length}</span></div>; })()}<div className="game-card-footer"><code>RUN {program.code}</code><div className="program-card-actions">{program.pluginId && <button className="button secondary" aria-label={`${program.name}を削除`} onClick={event => { event.stopPropagation(); removeGamePlugin(program.pluginId!); setSelectedIndex(0); setError(''); setNotice(`${program.code} を削除しました。`); }}><Trash2 size={13} /></button>}<button className="button primary" onClick={event => { event.stopPropagation(); launch(index); }}><Play size={13} />起動<ArrowRight size={13} /></button></div></div></div>
       </article>;
     })}</div>
   </section>;

@@ -59,7 +59,8 @@ describe('shared program packages and launching', () => {
     const result = await executeCommand('GAMEPROMPT', context());
     expect(result.error).toBeUndefined();
     expect(result.clipboardText).toContain('"format": 必ず "retrodos.game"');
-    expect(result.clipboardText).toContain('作りたいゲーム：');
+    expect(result.clipboardText).toContain('最初からコードやJSONを出力しないでください');
+    expect(result.clipboardText).toContain('v2 Webゲーム');
   });
   it('validates a declarative game plugin from the virtual drive', async () => {
     const ctx = context();

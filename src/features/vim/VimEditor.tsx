@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FileSystem } from '../filesystem/types';
 import { currentLineText, deleteCharacter, deleteCurrentLine, findSearchMatch, moveCursorVertically, openLineBelow, parseExCommand, pasteLineBelow } from './vimLogic';
 
@@ -20,6 +20,7 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const undoStack = useRef<Snapshot[]>([]);
   const redoStack = useRef<Snapshot[]>([]);
+  const pendingSelection = useRef<{ content: string; start: number; length: number } | null>(null);
   const lineRegister = useRef<string | null>(null);
   const pendingOperatorRef = useRef('');
   const handledCloseRequest = useRef(closeRequest);
@@ -48,18 +49,25 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
     setPendingOperatorState(value);
   }, []);
 
-  const placeCursor = useCallback((position: number) => {
-    const requested = Math.max(0, position);
-    setCursorState(requested);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const next = Math.min(requested, editor.value.length);
-      if (next !== requested) setCursorState(next);
-      editor.focus();
-      editor.setSelectionRange(next, next);
-    });
+  const applyPendingSelection = useCallback(() => {
+    const request = pendingSelection.current;
+    const editor = editorRef.current;
+    if (!request || !editor || editor.value !== request.content) return;
+    pendingSelection.current = null;
+    const start = Math.max(0, Math.min(request.start, editor.value.length));
+    editor.focus();
+    editor.setSelectionRange(start, Math.min(start + request.length, editor.value.length));
+    setCursorState(start);
   }, []);
+
+  const placeCursor = useCallback((position: number, nextContent = content) => {
+    const requested = Math.max(0, position);
+    pendingSelection.current = { content: nextContent, start: requested, length: 0 };
+    setCursorState(requested);
+    applyPendingSelection();
+  }, [applyPendingSelection, content]);
+
+  useLayoutEffect(applyPendingSelection, [active, applyPendingSelection, content, cursor, loading, mode]);
 
   const pushUndo = useCallback((value: string, position: number) => {
     const last = undoStack.current.at(-1);
@@ -76,6 +84,7 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
     setMessage('読み込み中...');
     undoStack.current = [];
     redoStack.current = [];
+    pendingSelection.current = null;
     setSearchQuery('');
 
     void fileSystem.readTextFile(path, 'C:\\').then(value => {
@@ -147,21 +156,19 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
   }, [content, placeCursor, pushUndo, setPendingOperator]);
 
   const applyEdit = useCallback((nextContent: string, nextCursor: number) => {
-    pushUndo(content, cursor);
+    pushUndo(content, editorRef.current?.selectionStart ?? cursor);
     setContent(nextContent);
     setPendingOperator('');
     setMessage('');
-    placeCursor(nextCursor);
+    placeCursor(nextCursor, nextContent);
   }, [content, cursor, placeCursor, pushUndo, setPendingOperator]);
 
   const placeSelection = useCallback((start: number, length: number) => {
     const safeStart = Math.max(0, Math.min(start, content.length));
+    pendingSelection.current = { content, start: safeStart, length };
     setCursorState(safeStart);
-    requestAnimationFrame(() => {
-      editorRef.current?.focus();
-      editorRef.current?.setSelectionRange(safeStart, Math.min(safeStart + length, editorRef.current.value.length));
-    });
-  }, [content.length]);
+    applyPendingSelection();
+  }, [applyPendingSelection, content]);
 
   const search = useCallback((query: string, direction: -1 | 1) => {
     if (!query) { setMessage('E35: 検索文字列がありません'); return; }
@@ -179,20 +186,20 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
     const previous = undoStack.current.pop();
     setPendingOperator('');
     if (!previous) { setMessage('変更はありません'); return; }
-    redoStack.current = [...redoStack.current.slice(-99), { content, cursor }];
+    redoStack.current = [...redoStack.current.slice(-99), { content, cursor: editorRef.current?.selectionStart ?? cursor }];
     setContent(previous.content);
     setMessage('1個前の変更に戻しました');
-    placeCursor(Math.min(previous.cursor, previous.content.length));
+    placeCursor(Math.min(previous.cursor, previous.content.length), previous.content);
   }, [content, cursor, placeCursor, setPendingOperator]);
 
   const redo = useCallback(() => {
     const next = redoStack.current.pop();
     setPendingOperator('');
     if (!next) { setMessage('やり直せる変更はありません'); return; }
-    undoStack.current = [...undoStack.current.slice(-99), { content, cursor }];
+    undoStack.current = [...undoStack.current.slice(-99), { content, cursor: editorRef.current?.selectionStart ?? cursor }];
     setContent(next.content);
     setMessage('1個の変更をやり直しました');
-    placeCursor(Math.min(next.cursor, next.content.length));
+    placeCursor(Math.min(next.cursor, next.content.length), next.content);
   }, [content, cursor, placeCursor, setPendingOperator]);
 
   const handleNormalKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -228,7 +235,7 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
       setContent(edit.text);
       setMode('INSERT');
       setMessage('-- INSERT --');
-      placeCursor(edit.cursor);
+      placeCursor(edit.cursor, edit.text);
     } else if (key === 'x') {
       event.preventDefault();
       const edit = deleteCharacter(content, position);
@@ -314,7 +321,7 @@ export function VimEditor({ active, path, fileSystem, closeRequest, onExit, onOp
       const end = event.currentTarget.selectionEnd;
       const next = content.slice(0, start) + '    ' + content.slice(end);
       setContent(next);
-      placeCursor(start + 4);
+      placeCursor(start + 4, next);
     }
   };
 

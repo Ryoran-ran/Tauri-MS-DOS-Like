@@ -1,24 +1,93 @@
+export interface GamePluginBase {
+  format: 'retrodos.game';
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  version: string;
+  author: string;
+}
+
 export interface StoryChoice { label: string; to: string; score?: number; give?: string; requires?: string }
 export interface StoryScene { id: string; title: string; text: string; choices: StoryChoice[]; ending?: 'win' | 'lose' }
 export interface StoryAchievement { id: string; name: string; description: string; scene: string }
-export interface GamePluginManifest {
-  format: 'retrodos.game'; manifestVersion: 1; id: string; code: string; name: string;
-  description: string; version: string; author: string; start: string;
-  scenes: StoryScene[]; achievements: StoryAchievement[];
+export interface StoryGamePluginManifest extends GamePluginBase {
+  manifestVersion: 1;
+  start: string;
+  scenes: StoryScene[];
+  achievements: StoryAchievement[];
 }
+
+export interface WebGameAchievement { id: string; name: string; description: string }
+export interface WebGamePluginManifest extends GamePluginBase {
+  manifestVersion: 2;
+  runtime: 'web';
+  display: {
+    width: number;
+    height: number;
+    scale: 'fit' | 'pixel';
+    background: string;
+  };
+  source: {
+    html: string;
+    css: string;
+    javascript: string;
+  };
+  achievements: WebGameAchievement[];
+}
+
+export type GamePluginManifest = StoryGamePluginManifest | WebGamePluginManifest;
+
 interface StorageLike { getItem(key: string): string | null; setItem(key: string, value: string): void }
 const STORAGE_KEY = 'retrodos.game-plugins.v1';
 const idPattern = /^[a-z][a-z0-9.-]{0,79}$/;
 const codePattern = /^[A-Z][A-Z0-9_]{0,31}$/;
+const colorPattern = /^#[0-9a-fA-F]{6}$/;
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, max: number) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+const optionalText = (value: unknown, max: number) => typeof value === 'string' && value.length <= max;
+
+function parseBase(value: Record<string, unknown>, invalid: (detail?: string) => never): GamePluginBase {
+  if (!text(value.id, 80) || !idPattern.test(value.id as string) || !text(value.code, 32) || !codePattern.test(value.code as string)) return invalid('IDまたはコード');
+  for (const key of ['name', 'description', 'version', 'author']) if (!text(value[key], key === 'description' ? 500 : 120)) return invalid(key);
+  if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(value.version as string)) return invalid('version');
+  return {
+    format: 'retrodos.game', id: value.id as string, code: value.code as string, name: value.name as string,
+    description: value.description as string, version: value.version as string, author: value.author as string,
+  };
+}
+
+function parseWebAchievements(value: unknown, invalid: (detail?: string) => never): WebGameAchievement[] {
+  if (!Array.isArray(value) || value.length > 50) return invalid('achievements');
+  const ids = new Set<string>();
+  return value.map((raw, index): WebGameAchievement => {
+    if (!object(raw) || !text(raw.id, 80) || !idPattern.test(raw.id as string) || ids.has(raw.id as string) || !text(raw.name, 120) || !text(raw.description, 500)) return invalid(`achievements[${index}]`);
+    ids.add(raw.id as string);
+    return { id: raw.id as string, name: raw.name as string, description: raw.description as string };
+  });
+}
 
 export function parseGamePlugin(value: unknown): GamePluginManifest {
-  const invalid = (detail = ''): never => { throw new Error(`ゲームプラグインが正しくありません${detail ? `: ${detail}` : '（retrodos.game / manifestVersion: 1）'}`); };
-  if (!object(value) || value.format !== 'retrodos.game' || value.manifestVersion !== 1) return invalid();
-  if (!text(value.id, 80) || !idPattern.test(value.id as string) || !text(value.code, 32) || !codePattern.test(value.code as string)) return invalid('IDまたはコード');
-  for (const key of ['name', 'description', 'version', 'author', 'start']) if (!text(value[key], key === 'description' ? 500 : 120)) return invalid(key);
-  if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(value.version as string)) return invalid('version');
+  const invalid = (detail = ''): never => { throw new Error(`ゲームプラグインが正しくありません${detail ? `: ${detail}` : '（retrodos.game / manifestVersion: 1 または 2）'}`); };
+  if (!object(value) || value.format !== 'retrodos.game' || ![1, 2].includes(value.manifestVersion as number)) return invalid();
+  if (new TextEncoder().encode(JSON.stringify(value)).length > 256_000) return invalid('256KBの上限を超えています');
+  const base = parseBase(value, invalid);
+
+  if (value.manifestVersion === 2) {
+    if (value.runtime !== 'web' || !object(value.display) || !object(value.source)) return invalid('runtime、displayまたはsource');
+    const { width, height, scale, background } = value.display;
+    if (!Number.isSafeInteger(width) || (width as number) < 240 || (width as number) > 1920 || !Number.isSafeInteger(height) || (height as number) < 180 || (height as number) > 1080) return invalid('display.widthまたはdisplay.height');
+    if (!['fit', 'pixel'].includes(scale as string) || typeof background !== 'string' || !colorPattern.test(background)) return invalid('display.scaleまたはdisplay.background');
+    if (!text(value.source.html, 100_000) || !optionalText(value.source.css, 80_000) || !text(value.source.javascript, 120_000)) return invalid('source');
+    return {
+      ...base, manifestVersion: 2, runtime: 'web',
+      display: { width: width as number, height: height as number, scale: scale as 'fit' | 'pixel', background },
+      source: { html: value.source.html as string, css: value.source.css as string, javascript: value.source.javascript as string },
+      achievements: parseWebAchievements(value.achievements, invalid),
+    };
+  }
+
+  if (!text(value.start, 120)) return invalid('start');
   if (!Array.isArray(value.scenes) || value.scenes.length < 1 || value.scenes.length > 100) return invalid('scenes');
   const sceneIds = new Set<string>();
   const scenes = value.scenes.map((raw, index): StoryScene => {
@@ -43,7 +112,7 @@ export function parseGamePlugin(value: unknown): GamePluginManifest {
     achievementIds.add(raw.id as string);
     return { id: raw.id as string, name: raw.name as string, description: raw.description as string, scene: raw.scene as string };
   });
-  return { format: 'retrodos.game', manifestVersion: 1, id: value.id as string, code: value.code as string, name: value.name as string, description: value.description as string, version: value.version as string, author: value.author as string, start: value.start as string, scenes, achievements };
+  return { ...base, manifestVersion: 1, start: value.start as string, scenes, achievements };
 }
 
 const browserStorage = (): StorageLike | null => typeof localStorage === 'undefined' ? null : localStorage;
@@ -65,7 +134,7 @@ export function installGamePlugin(value: unknown, storage: StorageLike | null = 
   if (conflict) throw new Error(`ゲームコードは既に使われています: ${plugin.code}`);
   const next = [...plugins.filter(item => item.id !== plugin.id), plugin].slice(-20);
   const serialized = JSON.stringify(next);
-  if (serialized.length > 1_000_000) throw new Error('ゲームプラグインの保存上限（1MB）を超えました。');
+  if (new TextEncoder().encode(serialized).length > 1_000_000) throw new Error('ゲームプラグインの保存上限（1MB）を超えました。');
   storage.setItem(STORAGE_KEY, serialized);
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('retrodos:game-plugins'));
   return plugin;

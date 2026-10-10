@@ -45,6 +45,14 @@ export function App() {
     requestAnimationFrame(focusInput);
   }, [navigate, insertCommand, focusInput]);
 
+  const executeFromGuide = useCallback((text: string) => {
+    navigate('terminal');
+    setSelectedCommand(null);
+    if (window.innerWidth <= 720) setSidebarOpen(false);
+    void runCommand(text);
+    requestAnimationFrame(focusInput);
+  }, [navigate, runCommand, focusInput]);
+
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false);
     if (activeView === 'terminal') requestAnimationFrame(focusInput);
@@ -105,7 +113,7 @@ export function App() {
     <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`} data-theme={settings.theme} style={{ '--app-font-size': `${settings.fontSize}px` } as CSSProperties}>
       <TitleBar activeView={activeView} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <div className="app-body">
-        {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onClose={closeSidebar} searchRef={searchRef} /></>}
+        {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onExecute={executeFromGuide} onClose={closeSidebar} searchRef={searchRef} /></>}
         <GameProfileProvider><main className="workspace" inert={narrow && sidebarOpen}>
           <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} onLaunchCommand={command => { void runCommand(command); }} />
           <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} followEnabled={settings.followOutput} />
