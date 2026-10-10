@@ -385,6 +385,7 @@ test('new output keeps older logs in place until explicitly following', async ({
   // The parser treats newlines as whitespace. A long help log also exercises scrolling.
   for (let index = 0; index < 5; index++) { await run(page, 'HELP'); }
   await expect(page.locator('.terminal-entry.input')).toHaveCount(6);
+  await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
   await log.evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')); });
   await run(page, 'ECHO latest-output');
   await expect(page.getByRole('button', { name: '新しい出力' })).toBeVisible();

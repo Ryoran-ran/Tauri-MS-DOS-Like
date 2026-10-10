@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUpRight, CornerDownLeft, Terminal as TerminalIcon } from 'lucide-react';
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import type { Ref } from 'react';
 import type { TerminalEntry } from '../../types/workspace';
 import { useCommandInput } from '../../hooks/useCommandInput';
@@ -26,19 +26,24 @@ export function Terminal({ active, entries, directory, busy, history, execute, a
   const followOutput = useRef(true);
   const [unread, setUnread] = useState(false);
 
-  useLayoutEffect(() => {
+  const scrollToLatest = useCallback(() => {
     const log = logRef.current;
     if (!log) return;
-    if (followOutput.current) { log.scrollTop = log.scrollHeight; setUnread(false); }
-    else setUnread(true);
-  }, [entries]);
-
-  const jumpToLatest = () => {
-    const log = logRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
+    log.scrollTop = log.scrollHeight;
     followOutput.current = true;
     setUnread(false);
-  };
+  }, []);
+
+  useLayoutEffect(() => {
+    const log = logRef.current;
+    if (!active || !log) return;
+    if (!followOutput.current) { setUnread(true); return; }
+    scrollToLatest();
+    const frame = requestAnimationFrame(scrollToLatest);
+    return () => cancelAnimationFrame(frame);
+  }, [active, entries, scrollToLatest]);
+
+  const jumpToLatest = scrollToLatest;
 
   return (
     <section className="terminal-view" aria-label="ターミナル画面" hidden={!active}>

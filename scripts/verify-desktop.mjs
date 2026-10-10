@@ -2,13 +2,16 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium, expect } from '@playwright/test';
 
 if (process.platform !== 'win32') throw new Error('This smoke test uses Windows WebView2.');
 const profile = process.argv.includes('--debug') ? 'debug' : 'release';
-const executable = fileURLToPath(new URL(`../src-tauri/target/${profile}/retrodos.exe`, import.meta.url));
+const executable = process.env.RETRODOS_EXECUTABLE
+  ? resolve(process.env.RETRODOS_EXECUTABLE)
+  : fileURLToPath(new URL(`../src-tauri/target/${profile}/retrodos.exe`, import.meta.url));
 const server = createServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
@@ -63,6 +66,8 @@ try {
   await input.press('Enter');
   await input.fill('DIR'); await input.press('Enter');
   await expect(log).toContainText('README.TXT');
+  await input.fill('HELP'); await input.press('Enter');
+  await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
   await input.fill('CD DOCS'); await input.press('Enter');
   await expect(page.locator('.status-path')).toHaveText('C:\\DOCS');
   await input.fill('TYPE "WELCOME NOTE.TXT"'); await input.press('Enter');
