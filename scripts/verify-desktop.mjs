@@ -2,13 +2,16 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium, expect } from '@playwright/test';
 
 if (process.platform !== 'win32') throw new Error('This smoke test uses Windows WebView2.');
 const profile = process.argv.includes('--debug') ? 'debug' : 'release';
-const executable = fileURLToPath(new URL(`../src-tauri/target/${profile}/retrodos.exe`, import.meta.url));
+const executable = process.env.RETRODOS_EXECUTABLE
+  ? resolve(process.env.RETRODOS_EXECUTABLE)
+  : fileURLToPath(new URL(`../src-tauri/target/${profile}/retrodos.exe`, import.meta.url));
 const server = createServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
@@ -49,13 +52,34 @@ try {
   assert(/^https?:\/\/tauri\.localhost(?:\/|$)/.test(page.url()) || page.url().startsWith('tauri://localhost'), `Expected embedded production assets, got ${page.url()}`);
   await expect(page).toHaveTitle('RetroDOS');
   await expect(page.locator('.environment-label')).toContainText('DESKTOP');
-  await expect(log).toContainText('RetroDOS Version 0.2.0');
+  await expect(log).toContainText('RetroDOS Version 0.3.0');
+  const cdp = await context.newCDPSession(page);
+  await input.fill('ve');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
+  await expect(input).toHaveValue('ver');
+  await input.press('Enter');
+  await input.fill('cl');
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyS', windowsVirtualKeyCode: 229 });
+  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Process', code: 'KeyS', windowsVirtualKeyCode: 229 });
+  await expect(input).toHaveValue('cls');
+  await input.press('Enter');
   await input.fill('DIR'); await input.press('Enter');
   await expect(log).toContainText('README.TXT');
+  await input.fill('HELP'); await input.press('Enter');
+  await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
   await input.fill('CD DOCS'); await input.press('Enter');
   await expect(page.locator('.status-path')).toHaveText('C:\\DOCS');
   await input.fill('TYPE "WELCOME NOTE.TXT"'); await input.press('Enter');
   await expect(log).toContainText('ようこそ、RetroDOSへ。');
+  await input.fill('SET SMOKE=OK && ECHO %SMOKE% > C:\\SMOKE.TXT'); await input.press('Enter');
+  await input.fill('TYPE C:\\SMOKE.TXT'); await input.press('Enter');
+  await expect(log).toContainText('OK');
+  await input.fill('DIR C:\\ | FIND "SMOKE.TXT"'); await input.press('Enter');
+  await expect(log).toContainText('SMOKE.TXT');
+  await input.fill('ECHO ECHO BAT-OK > C:\\SMOKE.BAT'); await input.press('Enter');
+  await input.fill('C:\\SMOKE.BAT'); await input.press('Enter');
+  await expect(log).toContainText('BAT-OK');
   await input.fill('GAMES'); await input.press('Enter');
   const gameSelector = page.getByRole('textbox', { name: 'ゲームコードまたは番号' });
   await expect(gameSelector).toBeFocused();
@@ -74,7 +98,7 @@ try {
   assert.deepEqual(errors, []);
   await mkdir(fileURLToPath(new URL('../docs/screenshots/', import.meta.url)), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../docs/screenshots/desktop.png', import.meta.url)) });
-  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, native WebView2, DIR, CD, TYPE, Space focus, keyboard game selection, Escape exit.`);
+  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, native WebView2 IME VER/CLS input, shell chain, redirect, pipe, BAT, keyboard game selection, Escape exit.`);
 } finally {
   if (browser) await browser.close().catch(() => {});
   if (app.exitCode === null && !app.killed) app.kill();

@@ -25,7 +25,7 @@ describe('DOS path resolution', () => {
 describe('virtual filesystem', () => {
   it('lists the initial root and reads relative/absolute text files', async () => {
     const fs = createFileSystem();
-    expect((await fs.listDirectory('', 'C:\\')).map(node => node.name)).toEqual(['GAMES', 'DOCS', 'SYSTEM', 'README.TXT']);
+    expect((await fs.listDirectory('', 'C:\\')).map(node => node.name)).toEqual(['GAMES', 'DOCS', 'SCRIPTS', 'SYSTEM', 'README.TXT']);
     expect(await fs.getDirectory('docs', 'C:\\')).toBe('C:\\DOCS');
     expect(await fs.readTextFile('commands.txt', 'C:\\DOCS')).toContain('HELP');
     expect(await fs.readTextFile('C:\\README.TXT', 'C:\\DOCS')).toContain('Welcome to RetroDOS.');
@@ -111,7 +111,7 @@ describe('virtual filesystem', () => {
     expect(await fs.tree('NOTES', 'C:\\')).toEqual(['C:\\NOTES', '└── HELLO.TXT']);
     const results = await fs.search('retrodos', 'C:\\NOTES', 'C:\\');
     expect(results).toEqual([{ path: 'C:\\NOTES\\HELLO.TXT', match: 'content', line: 2, preview: 'RetroDOS searchable text' }]);
-    expect((await fs.search('hello', 'C:\\', 'C:\\'))[0]).toMatchObject({ path: 'C:\\NOTES\\HELLO.TXT', match: 'name' });
+    expect(await fs.search('hello', 'C:\\', 'C:\\')).toContainEqual(expect.objectContaining({ path: 'C:\\NOTES\\HELLO.TXT', match: 'name' }));
     const info = await fs.getInfo('NOTES\\HELLO.TXT', 'C:\\');
     expect(info).toMatchObject({ path: 'C:\\NOTES\\HELLO.TXT', kind: 'file', size: 35 });
     expect(Number.isNaN(new Date(info.createdAt).getTime())).toBe(false);

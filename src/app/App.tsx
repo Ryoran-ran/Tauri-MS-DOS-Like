@@ -4,13 +4,13 @@ import { WorkspaceTabs } from '../components/layout/WorkspaceTabs';
 import { Sidebar } from '../components/sidebar/Sidebar';
 import { StatusBar } from '../components/statusbar/StatusBar';
 import { Terminal } from '../components/terminal/Terminal';
+import type { TerminalInputHandle } from '../components/terminal/Terminal';
 import type { CommandDefinition } from '../features/commands/types';
 import { GameHost } from '../features/games/GameHost';
 import { GameLibrary } from '../features/games/GameLibrary';
 import { DriveImport } from '../features/filesystem/DriveImport';
 import { MoreViewer } from '../features/filesystem/MoreViewer';
 import { VimEditor } from '../features/vim/VimEditor';
-import { useCommandInput } from '../hooks/useCommandInput';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 
@@ -21,15 +21,16 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 export function App() {
   const workspace = useWorkspace();
-  const input = useCommandInput(workspace.commandHistory, workspace.runCommand);
   const narrow = useMediaQuery('(max-width: 720px)');
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 720);
   const [commandSearchQuery, setCommandSearchQuery] = useState('');
   const [selectedCommand, setSelectedCommand] = useState<CommandDefinition | null>(null);
   const [vimCloseRequest, setVimCloseRequest] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
+  const commandInputRef = useRef<TerminalInputHandle>(null);
   const { navigate, runCommand, activeView, closeView, exitGame } = workspace;
-  const { insertCommand, focusInput } = input;
+  const focusInput = useCallback(() => commandInputRef.current?.focus(), []);
+  const insertCommand = useCallback((text: string) => commandInputRef.current?.insert(text), []);
 
   const insert = useCallback((text: string) => {
     navigate('terminal');
@@ -101,7 +102,7 @@ export function App() {
         {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onClose={closeSidebar} searchRef={searchRef} /></>}
         <main className="workspace" inert={narrow && sidebarOpen}>
           <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} />
-          <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} input={input} onInsert={insert} />
+          <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} />
           <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} closeRequest={vimCloseRequest} onExit={closeVim} />
           {workspace.openViews.includes('pager') && workspace.pager && <MoreViewer active={activeView === 'pager'} path={workspace.pager.path} content={workspace.pager.content} onExit={closePager} />}
           {workspace.openViews.includes('import') && <DriveImport active={activeView === 'import'} onImport={workspace.importDrive} onExit={closeImport} />}

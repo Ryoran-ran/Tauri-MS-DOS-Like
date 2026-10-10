@@ -1,10 +1,11 @@
 import { APP_VERSION } from '../../app/constants';
 import { findGame } from '../games/catalog';
-import type { CommandCategory, CommandDefinition, CommandResult } from './types';
+import type { CommandCategory, CommandContext, CommandDefinition, CommandResult } from './types';
 
 export const commandCategories: { id: CommandCategory; label: string }[] = [
   { id: 'basic', label: '基本操作' },
   { id: 'files', label: 'ファイル操作' },
+  { id: 'shell', label: 'シェル' },
   { id: 'games', label: 'ゲーム' },
   { id: 'system', label: 'システム' },
 ];
@@ -46,6 +47,56 @@ export const commands: readonly CommandDefinition[] = [
     usage: 'ECHO [文字列...]', examples: ['ECHO Hello, RetroDOS!', 'ECHO "こんにちは 世界"'],
     arguments: [{ name: '文字列', description: '表示するテキスト', required: false, variadic: true }],
     execute: args => output(args.join(' ')),
+  },
+  {
+    name: 'SET', displayName: '環境変数', aliases: [], category: 'shell',
+    description: '環境変数の一覧、確認、設定、削除を行います。値は%NAME%形式で参照できます。',
+    usage: 'SET [名前[=値]]', examples: ['SET', 'SET NAME=RETRODOS', 'ECHO %NAME%', 'SET NAME='],
+    arguments: [{ name: '名前と値', description: 'NAME=VALUE。値を空にすると削除', required: false, variadic: true }],
+    execute: (args, context) => {
+      if (args.length === 0) {
+        const entries = context.shell.listEnvironment();
+        return output(...(entries.length ? entries.map(([name, value]) => `${name}=${value}`) : ['環境変数は設定されていません。']));
+      }
+      const expression = args.join(' ');
+      const equals = expression.indexOf('=');
+      if (equals === -1) {
+        const prefix = expression.trim().toUpperCase();
+        const entries = context.shell.listEnvironment().filter(([name]) => name.startsWith(prefix));
+        return entries.length ? output(...entries.map(([name, value]) => `${name}=${value}`)) : { error: true, output: [`環境変数が見つかりません: ${prefix}`] };
+      }
+      const name = expression.slice(0, equals).trim();
+      const value = expression.slice(equals + 1);
+      if (!value) {
+        const deleted = context.shell.deleteEnvironment(name);
+        return output(deleted ? `環境変数を削除しました: ${name.toUpperCase()}` : `環境変数は設定されていません: ${name.toUpperCase()}`);
+      }
+      context.shell.setEnvironment(name, value);
+      return output(`${name.toUpperCase()}=${value}`);
+    },
+  },
+  {
+    name: 'ALIAS', displayName: 'コマンドエイリアス', aliases: [], category: 'shell',
+    description: '短い名前にコマンドを割り当てます。実行時の引数は展開後のコマンド末尾へ追加されます。',
+    usage: 'ALIAS [名前[=コマンド]]', examples: ['ALIAS LL=DIR', 'LL DOCS', 'ALIAS LL='],
+    arguments: [{ name: '名前とコマンド', description: 'NAME=COMMAND。コマンドを空にすると削除', required: false, variadic: true }],
+    execute: (args, context) => manageShellDefinition('alias', args, context),
+  },
+  {
+    name: 'DEF', displayName: 'ユーザー定義コマンド', aliases: ['COMMAND'], category: 'shell',
+    description: '複数処理を名前付きコマンドとして保存します。%1〜%9と%*で実行時の引数を参照できます。',
+    usage: 'DEF [名前[=処理]]', examples: ['DEF GREET=ECHO Hello %1', 'DEF BUILD="CD DOCS && DIR"', 'DEF GREET='],
+    arguments: [{ name: '名前と処理', description: 'NAME=BODY。&&を含む処理は引用符で囲む', required: false, variadic: true }],
+    execute: (args, context) => manageShellDefinition('command', args, context),
+  },
+  {
+    name: 'CALL', displayName: 'BATファイル実行', aliases: [], category: 'shell',
+    description: '仮想ドライブ上の.BATファイルを実行します。拡張子は省略できます。',
+    usage: 'CALL <BATファイル> [引数...]', examples: ['CALL DEMO.BAT', 'CALL BUILD release'],
+    arguments: [{ name: 'BATファイルと引数', description: '実行するファイルと%1〜%9へ渡す値', required: true, variadic: true }],
+    execute: (args, context) => context.runBatch
+      ? context.runBatch(args[0]!, args.slice(1))
+      : { error: true, output: ['BAT実行環境を初期化できませんでした。'] },
   },
   {
     name: 'DIR', displayName: 'ファイル一覧', aliases: [], category: 'files',
@@ -148,13 +199,17 @@ export const commands: readonly CommandDefinition[] = [
   },
   {
     name: 'FIND', displayName: 'ファイル検索', aliases: [], category: 'files',
-    description: 'ファイル名とテキスト内容を、指定したフォルダー以下から検索します。',
-    usage: 'FIND <検索語> [パス]', examples: ['FIND RetroDOS', 'FIND "ゲーム" C:\\'],
+    description: 'ファイル名と本文を検索します。パイプ入力がある場合は入力行を絞り込みます。',
+    usage: 'FIND <検索語> [パス]', examples: ['FIND RetroDOS', 'FIND "ゲーム" C:\\', 'DIR | FIND ".TXT"'],
     arguments: [
       { name: '検索語', description: 'ファイル名または本文に含まれる文字', required: true },
       { name: 'パス', description: '検索を開始する場所。省略時は現在位置', required: false },
     ],
     execute: async (args, context) => {
+      if (context.stdin !== undefined) {
+        const query = args[0]!.normalize('NFKC').toLowerCase();
+        return output(...context.stdin.filter(line => line.normalize('NFKC').toLowerCase().includes(query)));
+      }
       const results = await context.fileSystem.search(args[0]!, args[1] ?? context.currentDirectory, context.currentDirectory);
       if (results.length === 0) return output(`「${args[0]}」に一致する項目はありません。`);
       return output(`検索結果: ${results.length} 件`, ...results.map(result => result.match === 'name'
@@ -284,10 +339,36 @@ export function searchCommands(query: string): CommandDefinition[] {
     .some(value => value.toLowerCase().includes(normalized)));
 }
 
-export function completeCommand(input: string): string[] {
+export function completeCommand(input: string, additionalNames: readonly string[] = []): string[] {
   if (!input || /\s/.test(input)) return [];
   const prefix = input.toUpperCase();
-  return commands.flatMap(command => [command.name, ...command.aliases]).filter(name => name.startsWith(prefix));
+  return [...new Set([...commands.flatMap(command => [command.name, ...command.aliases]), ...additionalNames.map(name => name.toUpperCase())])]
+    .filter(name => name.startsWith(prefix));
+}
+
+function manageShellDefinition(kind: 'alias' | 'command', args: string[], context: CommandContext): CommandResult {
+  const entries = kind === 'alias' ? context.shell.listAliases() : context.shell.listUserCommands();
+  const label = kind === 'alias' ? 'エイリアス' : 'ユーザー定義コマンド';
+  if (args.length === 0) return output(...(entries.length ? entries.map(([name, value]) => `${name}=${value}`) : [`${label}は登録されていません。`]));
+
+  const expression = args.join(' ');
+  const equals = expression.indexOf('=');
+  if (equals === -1) {
+    const name = expression.trim().toUpperCase();
+    const value = kind === 'alias' ? context.shell.getAlias(name) : context.shell.getUserCommand(name);
+    return value === undefined ? { error: true, output: [`${label}が見つかりません: ${name}`] } : output(`${name}=${value}`);
+  }
+
+  const name = expression.slice(0, equals).trim().toUpperCase();
+  const value = expression.slice(equals + 1).trim();
+  if (!value) {
+    const deleted = kind === 'alias' ? context.shell.deleteAlias(name) : context.shell.deleteUserCommand(name);
+    return output(deleted ? `${label}を削除しました: ${name}` : `${label}は登録されていません: ${name}`);
+  }
+  if (findCommand(name)) return { error: true, output: [`組み込みコマンド名は上書きできません: ${name}`] };
+  if (kind === 'alias') context.shell.setAlias(name, value);
+  else context.shell.setUserCommand(name, value);
+  return output(`${label}を登録しました: ${name}=${value}`);
 }
 
 function formatTimestamp(value?: string): string {

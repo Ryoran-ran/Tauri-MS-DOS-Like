@@ -1,7 +1,8 @@
 import type { FileSystem } from '../filesystem/types';
 import type { ActiveView } from '../../types/workspace';
+import type { ShellSession } from './shellState';
 
-export type CommandCategory = 'basic' | 'files' | 'games' | 'system';
+export type CommandCategory = 'basic' | 'files' | 'shell' | 'games' | 'system';
 export interface ArgumentDefinition {
   name: string;
   description: string;
@@ -22,6 +23,9 @@ export interface CommandResult {
 export interface CommandContext {
   currentDirectory: string;
   fileSystem: FileSystem;
+  shell: ShellSession;
+  stdin?: string[];
+  runBatch?: (path: string, args: string[]) => Promise<CommandResult>;
   now: () => Date;
 }
 export interface CommandDefinition {
