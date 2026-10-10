@@ -1,8 +1,10 @@
 import type { FileSystem } from '../filesystem/types';
 import type { ActiveView } from '../../types/workspace';
 import type { ShellSession } from './shellState';
+import type { BuiltinAppId } from '../apps/catalog';
+import type { ProgramFilter } from '../programs/types';
 
-export type CommandCategory = 'basic' | 'files' | 'shell' | 'games' | 'system';
+export type CommandCategory = 'basic' | 'files' | 'shell' | 'programs' | 'system';
 export interface ArgumentDefinition {
   name: string;
   description: string;
@@ -17,6 +19,8 @@ export interface CommandResult {
   activeView?: ActiveView;
   activeGame?: string;
   activeDocument?: string;
+  programFilter?: ProgramFilter;
+  appLaunch?: { id: BuiltinAppId; path?: string; expression?: string };
   pager?: { path: string; content: string };
   download?: { fileName: string; content: string; mimeType: string };
 }

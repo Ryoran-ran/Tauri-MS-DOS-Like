@@ -1,0 +1,20 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.guess",
+  "code": "GUESS",
+  "name": "数当てゲーム",
+  "description": "1〜100の秘密の数字をヒントから見つけよう",
+  "version": "0.4.0",
+  "category": "games",
+  "icon": "target",
+  "order": 10,
+  "aliases": [],
+  "argument": {
+    "kind": "none"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "guess"
+  }
+}

@@ -13,7 +13,7 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const log = page.getByRole('log');
-  await expect(log).toContainText('RetroDOS Version 0.3.0');
+  await expect(log).toContainText('RetroDOS Version 0.4.0');
   await commandInput(page).evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(commandInput(page)).toBeFocused();
@@ -75,7 +75,7 @@ test('search, details and insertion do not execute automatically', async ({ page
   await search.fill('no-results');
   await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
   await search.fill('');
-  await expect(page.locator('.command-item')).toHaveCount(30);
+  await expect(page.locator('.command-item')).toHaveCount(39);
 });
 
 test('file operations support copy, rename, move and deletion', async ({ page }) => {
@@ -115,7 +115,7 @@ test('file commands support discovery, paging, wildcard undo and drive transfer'
   await run(page, 'MORE DOCS\\COMMANDS.TXT');
   const pager = page.getByRole('region', { name: 'MOREページャー' });
   await expect(pager).toBeVisible();
-  await expect(pager).toContainText('RetroDOS v0.3 コマンドガイド');
+  await expect(pager).toContainText('RetroDOS v0.4 コマンドガイド');
   await page.keyboard.press('End');
   await page.keyboard.press('Escape');
   await expect(commandInput(page)).toBeFocused();
@@ -307,8 +307,8 @@ test('history restores drafts, completion supports keyboard and Escape', async (
 
 test('library, GUESS validation, win, replay and exit', async ({ page }) => {
   await run(page, 'GAMES');
-  await expect(page.getByRole('region', { name: 'ゲームライブラリ画面' })).toBeVisible();
-  await expect(page.getByRole('article')).toContainText('built-in');
+  await expect(page.getByRole('region', { name: 'プログラム一覧画面' })).toBeVisible();
+  await expect(page.getByRole('article')).toContainText('標準プログラム');
   await page.getByRole('button', { name: '起動', exact: true }).click();
   const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
   const number = page.getByRole('spinbutton', { name: '予想する数字' });
@@ -343,7 +343,7 @@ test('library, GUESS validation, win, replay and exit', async ({ page }) => {
 });
 
 test('game library supports code, number and arrow-only keyboard selection', async ({ page }) => {
-  const selector = page.getByRole('textbox', { name: 'ゲームコードまたは番号' });
+  const selector = page.getByRole('textbox', { name: 'プログラムコードまたは番号' });
   const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
 
   await run(page, 'GAMES');
@@ -353,7 +353,7 @@ test('game library supports code, number and arrow-only keyboard selection', asy
   await expect(selector).toBeFocused();
   await selector.fill('UNKNOWN');
   await selector.press('Enter');
-  await expect(page.getByRole('alert')).toContainText('ゲームが見つかりません');
+  await expect(page.getByRole('alert')).toContainText('プログラムが見つかりません');
 
   await selector.fill('guess');
   await selector.press('Enter');

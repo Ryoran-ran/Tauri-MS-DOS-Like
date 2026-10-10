@@ -1,0 +1,22 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.sysinfo",
+  "code": "SYSINFO",
+  "name": "システム情報",
+  "description": "実行環境と仮想ドライブ情報",
+  "version": "0.4.0",
+  "category": "system",
+  "icon": "monitor",
+  "order": 10,
+  "aliases": [
+    "SYSTEMINFO"
+  ],
+  "argument": {
+    "kind": "none"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "sysinfo"
+  }
+}

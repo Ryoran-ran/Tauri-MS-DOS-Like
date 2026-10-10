@@ -1,0 +1,23 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.files",
+  "code": "FILES",
+  "name": "ファイルマネージャー",
+  "description": "仮想ドライブを整理・編集",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "folder",
+  "order": 10,
+  "aliases": [
+    "FM",
+    "EXPLORER"
+  ],
+  "argument": {
+    "kind": "directory"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "files"
+  }
+}

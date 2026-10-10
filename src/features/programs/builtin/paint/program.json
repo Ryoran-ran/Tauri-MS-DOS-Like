@@ -1,0 +1,21 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.paint",
+  "code": "PAINT",
+  "name": "ASCIIペイント",
+  "description": "文字で描いてファイル保存",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "paint",
+  "order": 50,
+  "aliases": [],
+  "argument": {
+    "kind": "drawing",
+    "default": "C:\\ART.ASC"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "paint"
+  }
+}

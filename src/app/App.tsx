@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { TitleBar } from '../components/layout/TitleBar';
 import { WorkspaceTabs } from '../components/layout/WorkspaceTabs';
 import { Sidebar } from '../components/sidebar/Sidebar';
@@ -7,12 +8,15 @@ import { Terminal } from '../components/terminal/Terminal';
 import type { TerminalInputHandle } from '../components/terminal/Terminal';
 import type { CommandDefinition } from '../features/commands/types';
 import { GameHost } from '../features/games/GameHost';
-import { GameLibrary } from '../features/games/GameLibrary';
+import { ProgramLibrary } from '../features/programs/ProgramLibrary';
 import { DriveImport } from '../features/filesystem/DriveImport';
 import { MoreViewer } from '../features/filesystem/MoreViewer';
 import { VimEditor } from '../features/vim/VimEditor';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { BuiltinApps } from '../features/apps/BuiltinApps';
+import { PersonalDataProvider } from '../features/apps/personalData';
+import { decodeSettings, defaultSettings, useStoredState } from '../features/apps/storage';
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -21,6 +25,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 export function App() {
   const workspace = useWorkspace();
+  const [settings, setSettings, storageError] = useStoredState('retrodos.settings.v1', defaultSettings, decodeSettings);
   const narrow = useMediaQuery('(max-width: 720px)');
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 720);
   const [commandSearchQuery, setCommandSearchQuery] = useState('');
@@ -60,8 +65,8 @@ export function App() {
   const closeVim = useCallback(() => closeView('vim'), [closeView]);
   const closePager = useCallback(() => closeView('pager'), [closeView]);
   const closeImport = useCallback(() => closeView('import'), [closeView]);
-  const closeGameLibrary = useCallback(() => closeView('game-library'), [closeView]);
-  const launchGame = useCallback((name: string) => { void runCommand(`RUN ${name}`); }, [runCommand]);
+  const closeProgramLibrary = useCallback(() => closeView('program-library'), [closeView]);
+  const launchProgram = useCallback((code: string) => { void runCommand(`RUN ${code}`); }, [runCommand]);
   const switchTab = useCallback((step: -1 | 1) => {
     const currentIndex = workspace.openViews.indexOf(activeView);
     const nextIndex = (currentIndex + step + workspace.openViews.length) % workspace.openViews.length;
@@ -96,18 +101,19 @@ export function App() {
   }, [activeView, runCommand, switchTab, toggleSidebar]);
 
   return (
-    <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`}>
+    <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`} data-theme={settings.theme} style={{ '--app-font-size': `${settings.fontSize}px` } as CSSProperties}>
       <TitleBar activeView={activeView} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <div className="app-body">
         {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onClose={closeSidebar} searchRef={searchRef} /></>}
         <main className="workspace" inert={narrow && sidebarOpen}>
-          <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} />
-          <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} />
+          <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} onLaunchCommand={command => { void runCommand(command); }} />
+          <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} followEnabled={settings.followOutput} />
           <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} closeRequest={vimCloseRequest} onExit={closeVim} />
           {workspace.openViews.includes('pager') && workspace.pager && <MoreViewer active={activeView === 'pager'} path={workspace.pager.path} content={workspace.pager.content} onExit={closePager} />}
           {workspace.openViews.includes('import') && <DriveImport active={activeView === 'import'} onImport={workspace.importDrive} onExit={closeImport} />}
-          {workspace.openViews.includes('game-library') && <GameLibrary active={activeView === 'game-library'} onLaunch={launchGame} onBack={closeGameLibrary} />}
+          {workspace.openViews.includes('program-library') && <ProgramLibrary key={workspace.programLibraryLaunch.request} active={activeView === 'program-library'} initialFilter={workspace.programLibraryLaunch.filter} onLaunch={launchProgram} onBack={closeProgramLibrary} />}
           {workspace.openViews.includes('game') && workspace.activeGame && <GameHost id={workspace.activeGame} active={activeView === 'game'} onExit={exitGame} />}
+          <PersonalDataProvider><BuiltinApps activeView={activeView} openViews={workspace.openViews} closeView={closeView} fileSystem={workspace.fileSystem} fileRevision={workspace.fileRevision} appLaunches={workspace.appLaunches} runCommand={runCommand} settings={settings} setSettings={setSettings} storageError={storageError} /></PersonalDataProvider>
         </main>
       </div>
       <StatusBar directory={workspace.currentDirectory} status={workspace.status} />

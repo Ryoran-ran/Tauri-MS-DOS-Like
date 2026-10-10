@@ -1,0 +1,23 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.vim",
+  "code": "VIM",
+  "name": "VIM",
+  "description": "Vim風のテキスト編集・保存",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "editor",
+  "order": 70,
+  "aliases": [
+    "EDIT"
+  ],
+  "argument": {
+    "kind": "document",
+    "default": "MEMO.TXT"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "vim"
+  }
+}

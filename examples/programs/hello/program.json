@@ -1,0 +1,15 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "example.hello",
+  "code": "HELLO",
+  "name": "Hello RetroDOS",
+  "description": "外部で作成するWebプログラムの雛形",
+  "version": "1.0.0",
+  "category": "tools",
+  "icon": "editor",
+  "order": 100,
+  "aliases": [],
+  "argument": { "kind": "none" },
+  "entry": { "runtime": "web", "path": "index.html" }
+}
