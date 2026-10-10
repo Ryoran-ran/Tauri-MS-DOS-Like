@@ -52,7 +52,7 @@ try {
   assert(/^https?:\/\/tauri\.localhost(?:\/|$)/.test(page.url()) || page.url().startsWith('tauri://localhost'), `Expected embedded production assets, got ${page.url()}`);
   await expect(page).toHaveTitle('RetroDOS');
   await expect(page.locator('.environment-label')).toContainText('DESKTOP');
-  await expect(log).toContainText('RetroDOS Version 0.4.0');
+  await expect(log).toContainText('RetroDOS Version 0.5.0');
   const cdp = await context.newCDPSession(page);
   await input.fill('ve');
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
@@ -87,7 +87,7 @@ try {
   await vimEditor.press('i');
   await vimEditor.fill('alpha\nbeta alpha\ngamma');
   await vimEditor.press('Escape');
-  await vimEditor.press('Home'); await vimEditor.press('k');
+  await vimEditor.press('Control+End'); await vimEditor.press('Home'); await vimEditor.press('k');
   await vimEditor.press('y'); await vimEditor.press('y'); await vimEditor.press('p');
   await expect(vimEditor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
   await vimEditor.press('u'); await expect(vimEditor).toHaveValue('alpha\nbeta alpha\ngamma');
@@ -112,7 +112,7 @@ try {
   await gameSelector.evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(gameSelector).toBeFocused();
-  await gameSelector.press('ArrowDown');
+  await gameSelector.fill('GUESS');
   await gameSelector.press('Enter');
   const guessInput = page.getByRole('spinbutton', { name: '予想する数字' });
   await expect(guessInput).toBeVisible();
@@ -121,6 +121,20 @@ try {
   await expect(guessInput).toBeFocused();
   await guessInput.press('Escape');
   await expect(input).toBeFocused();
+  for (const [command, label] of [['SNAKE', 'SNAKE盤面'], ['MINES', '地雷原'], ['BLOCKS', '落ちものパズル盤面'], ['ADVENTURE', '磁気カードを取る'], ['ROGUE', 'ASCII地下迷宮']]) {
+    await input.fill(command); await input.press('Enter');
+    const primary = command === 'ADVENTURE' ? page.getByRole('button', { name: new RegExp(label) }) : page.getByLabel(label);
+    await expect(primary).toBeFocused();
+    if (command === 'MINES') await page.keyboard.press('Enter');
+    if (command === 'BLOCKS') await page.keyboard.press('Space');
+    if (command === 'ROGUE') { await page.keyboard.press('ArrowRight'); await expect(page.locator('.rogue-hud')).toContainText('TURN 1'); }
+    await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+  }
+  await input.fill('GAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON'); await input.press('Enter');
+  await expect(log).toContainText('CAVE — HELLO CAVE');
+  await input.fill('RUN CAVE'); await input.press('Enter');
+  await expect(page.getByRole('region', { name: 'HELLO CAVE テキストアドベンチャー' })).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(input).toBeFocused();
   for (const [command, name] of [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC "2+3*4"', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']]) {
     await input.fill(command); await input.press('Enter');
     const program = page.getByRole('region', { name, exact: true });
@@ -148,9 +162,9 @@ try {
   await expect(input).toBeFocused();
   await input.fill('PROGRAMS'); await input.press('Enter');
   const programs = page.getByRole('region', { name: 'プログラム一覧画面' });
-  await expect(programs.getByRole('article')).toHaveCount(10);
+  await expect(programs.getByRole('article')).toHaveCount(16);
   await programs.getByRole('group', { name: 'プログラムの分類' }).getByRole('button', { name: /^ゲーム/ }).click();
-  await expect(programs.getByRole('article')).toHaveCount(1);
+  await expect(programs.getByRole('article')).toHaveCount(7);
   await gameSelector.fill('CALC'); await gameSelector.press('Enter');
   await expect(page.getByRole('region', { name: '電卓', exact: true })).toBeVisible();
   await expect(page.getByLabel('計算式', { exact: true })).toBeFocused();
@@ -158,7 +172,7 @@ try {
   assert.deepEqual(errors, []);
   await mkdir(fileURLToPath(new URL('../docs/screenshots/', import.meta.url)), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../docs/screenshots/desktop.png', import.meta.url)) });
-  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, IME VER/CLS, shell, BAT, Vim line/search/options, games, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
+  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, IME VER/CLS, shell, BAT, Vim line/search/options, 6 built-in games, score/plugin host, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
 } catch (error) {
   if (browser) {
     const page = browser.contexts()[0]?.pages().find(candidate => !candidate.url().startsWith('devtools:'));

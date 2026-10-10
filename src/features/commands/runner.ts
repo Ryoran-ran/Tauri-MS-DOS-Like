@@ -208,6 +208,8 @@ function mergeMetadata(previous: CommandResult, next: CommandResult, output: str
     ...value('currentDirectory', previous, next),
     ...value('activeView', previous, next),
     ...value('activeGame', previous, next),
+    ...value('gamePluginInstall', previous, next),
+    ...value('clipboardText', previous, next),
     ...value('programFilter', previous, next),
     ...value('activeDocument', previous, next),
     ...value('appLaunch', previous, next),

@@ -1,5 +1,6 @@
 import type { CommandContext, CommandResult } from '../commands/types';
 import type { ProgramManifest } from './types';
+import type { BuiltinAppId } from './types';
 
 /** コマンド・一覧・メニューが同じ起動処理と引数検証を使う。 */
 export async function launchProgram(program: ProgramManifest, args: string[], context: CommandContext): Promise<CommandResult> {
@@ -9,7 +10,7 @@ export async function launchProgram(program: ProgramManifest, args: string[], co
     return { error: true, output: [`${program.code} の引数が正しくありません。`, `HELP ${program.code} で使用方法を確認してください。`] };
   }
   const module = program.entry.module;
-  if (module === 'guess') return { output: [`${program.code} を起動しました。`], activeView: 'game', activeGame: module };
+  if (program.category === 'games') return { output: [`${program.code} を起動しました。`], activeView: 'game', activeGame: module };
   let path: string | undefined;
   if (kind === 'directory') path = await context.fileSystem.getDirectory(args[0] ?? program.argument.default ?? context.currentDirectory, context.currentDirectory);
   if (kind === 'markdown' && args[0]) {
@@ -28,5 +29,6 @@ export async function launchProgram(program: ProgramManifest, args: string[], co
     }
   }
   if (module === 'vim') return { output: [`${path} をVimで開きました。`], activeView: 'vim', activeDocument: path };
-  return { output: [`${program.name}を開きました。`], activeView: module, appLaunch: { id: module, path, expression: kind === 'expression' ? args.join(' ') : undefined } };
+  const appId = module as BuiltinAppId;
+  return { output: [`${program.name}を開きました。`], activeView: appId, appLaunch: { id: appId, path, expression: kind === 'expression' ? args.join(' ') : undefined } };
 }

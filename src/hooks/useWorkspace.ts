@@ -6,6 +6,8 @@ import { createFileSystem } from '../features/filesystem/filesystem';
 import type { ActiveView, ExecutionStatus, TerminalEntry } from '../types/workspace';
 import type { BuiltinAppId } from '../features/apps/catalog';
 import type { ProgramFilter } from '../features/programs/types';
+import { installGamePlugin } from '../features/games/gamePlugin';
+import { copyTextToClipboard } from '../utils/clipboard';
 
 export function useWorkspace() {
   const [fileSystem] = useState(createFileSystem);
@@ -40,7 +42,19 @@ export function useWorkspace() {
     setTerminalEntries(entries => [...entries, entry]);
     try {
       const result = await executeCommand(input, { fileSystem, shell, currentDirectory, now: () => new Date() });
-      const newEntries = result.output.map(text => ({ id: nextId.current++, kind: result.error ? 'error' as const : 'output' as const, text }));
+      let installationError = '';
+      if (result.gamePluginInstall) {
+        try { installGamePlugin(result.gamePluginInstall); }
+        catch (error) { installationError = error instanceof Error ? error.message : 'ゲームプラグインを保存できませんでした。'; }
+      }
+      let clipboardMessage = '';
+      let clipboardError = '';
+      if (result.clipboardText !== undefined) {
+        try { await copyTextToClipboard(result.clipboardText); clipboardMessage = 'ゲーム作成プロンプトをクリップボードにコピーしました。'; }
+        catch (error) { clipboardError = error instanceof Error ? error.message : 'クリップボードにコピーできませんでした。'; }
+      }
+      const failed = Boolean(result.error || installationError || clipboardError);
+      const newEntries = [...result.output, ...(clipboardMessage ? [clipboardMessage] : []), ...(installationError ? [installationError] : []), ...(clipboardError ? [clipboardError] : [])].map(text => ({ id: nextId.current++, kind: failed ? 'error' as const : 'output' as const, text }));
       setTerminalEntries(entries => result.clearTerminal ? newEntries : [...entries, ...newEntries]);
       if (result.currentDirectory !== undefined) setCurrentDirectory(result.currentDirectory);
       if (result.activeView) {
@@ -56,7 +70,7 @@ export function useWorkspace() {
       }
       if (result.pager) setPager(result.pager);
       if (result.download) downloadFile(result.download.fileName, result.download.content, result.download.mimeType);
-      setStatus(result.error ? 'ERROR' : result.activeGame ? 'RUNNING' : 'READY');
+      setStatus(failed ? 'ERROR' : result.activeGame ? 'RUNNING' : 'READY');
     } finally {
       executing.current = false;
       setBusy(false);

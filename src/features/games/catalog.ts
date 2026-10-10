@@ -11,7 +11,7 @@ export interface GameMetadata {
 
 export const gameCatalog: readonly GameMetadata[] = programCatalog.filter(program => program.category === 'games').map(program => ({
   id: program.entry.module, name: program.code, title: program.name,
-  description: program.description, genre: 'ゲーム', type: 'built-in',
+  description: program.description, genre: program.code === 'GUESS' ? '数当て' : program.code === 'SNAKE' ? 'アーケード' : program.code === 'MINES' ? 'パズル' : program.code === 'BLOCKS' ? '落ちもの' : program.code === 'ADVENTURE' ? 'テキストADV' : 'ローグライク', type: 'built-in',
 }));
 
 export const findGame = (name: string) => gameCatalog.find(game => game.name === name.toUpperCase());

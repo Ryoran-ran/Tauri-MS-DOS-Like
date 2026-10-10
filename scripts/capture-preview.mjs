@@ -17,16 +17,20 @@ try {
   await commandInput.press('Enter');
   await page.locator('.library-view').waitFor();
   await page.screenshot({ path: fileURLToPath(new URL('game-library.png', outputDirectory)), fullPage: true });
-  await page.locator('.game-card .button.primary').click();
+  await page.locator('.game-card .button.primary').first().click();
   await page.locator('.guess-form input').waitFor();
   await page.screenshot({ path: fileURLToPath(new URL('guess.png', outputDirectory)), fullPage: true });
+  await page.locator('.game-topline .text-button').click();
+  await commandInput.fill('SNAKE'); await commandInput.press('Enter');
+  await page.getByLabel('SNAKE盤面').waitFor();
+  await page.screenshot({ path: fileURLToPath(new URL('games.png', outputDirectory)), fullPage: true });
   await page.locator('.game-topline .text-button').click();
   await commandInput.fill('PROGRAMS'); await commandInput.press('Enter');
   await page.getByRole('region', { name: 'プログラム一覧画面' }).waitFor();
   await page.screenshot({ path: fileURLToPath(new URL('programs.png', outputDirectory)), fullPage: true });
   await page.keyboard.press('Escape');
   await commandInput.fill('TODO'); await commandInput.press('Enter');
-  await page.getByLabel('タスク名', { exact: true }).fill('RetroDOS v0.4を試す');
+  await page.getByLabel('タスク名', { exact: true }).fill('RetroDOS v0.5を試す');
   await page.getByRole('button', { name: '追加', exact: true }).click();
   await page.getByRole('tab', { name: 'ターミナル', exact: true }).click();
   await commandInput.fill('CALC "(12 + 8) * 3"'); await commandInput.press('Enter');
@@ -39,5 +43,5 @@ try {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.locator('.sidebar-toggle').click();
   await page.screenshot({ path: fileURLToPath(new URL('mobile.png', outputDirectory)), fullPage: true });
-  console.log('Saved 7 screenshots to docs/screenshots.');
+  console.log('Saved 8 screenshots to docs/screenshots.');
 } finally { await browser.close(); }

@@ -273,9 +273,9 @@ test('settings persist and change colors, font, calendar and scrolling; system i
   await expect.poll(() => page.getByRole('log').evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
   await run(page, 'ECHO information-test > INFO.TXT'); await run(page, 'SYSINFO');
   const system = page.getByRole('region', { name: 'システム情報', exact: true });
-  await expect(system).toContainText('Version 0.4.0');
+  await expect(system).toContainText('Version 0.5.0');
   await expect(system.locator('.system-metrics').first()).toContainText('bytes');
-  await expect(system).toContainText('39');
+  await expect(system).toContainText('46');
   await page.getByRole('tab', { name: '設定', exact: true }).click();
   await settings.getByRole('button', { name: '設定を初期値に戻す' }).click();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dos');

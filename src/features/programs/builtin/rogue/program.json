@@ -1,0 +1,15 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.rogue",
+  "code": "ROGUE",
+  "name": "ROGUE",
+  "description": "自動生成された地下迷宮を探索するASCIIローグライク",
+  "version": "0.5.0",
+  "category": "games",
+  "icon": "rogue",
+  "order": 60,
+  "aliases": ["DUNGEON"],
+  "argument": { "kind": "none" },
+  "entry": { "runtime": "builtin", "module": "rogue" }
+}

@@ -2,7 +2,7 @@
 
 MS-DOS風のコマンド操作と、現代的なデスクトップUIを組み合わせた仮想ワークスペースです。
 
-React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデスクトップ版を同じコードベースで提供します。現在のバージョンは **v0.4.0** です。
+React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデスクトップ版を同じコードベースで提供します。現在のバージョンは **v0.5.0** です。
 
 ![RetroDOSのターミナル](docs/screenshots/terminal.png)
 
@@ -21,7 +21,9 @@ React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデ�
 - 長文をページ単位で閲覧できるMOREページャー
 - 仮想ドライブのJSONエクスポート・インポート
 - ツール・ゲーム・システムをコード・番号・矢印で選べる共通プログラム一覧
-- 内蔵数当てゲーム「GUESS」
+- GUESS、SNAKE、MINES、BLOCKS、テキストADV、ローグライクの内蔵ゲーム
+- ゲーム別ハイスコア・プレイ回数・実績の自動保存
+- JSONゲームプラグインの取り込み、一覧・コマンド起動
 - ファイルマネージャー、ToDo、カレンダー、電卓、ASCIIペイント、Markdownビューア
 - システム情報と、配色・文字サイズ・操作を変更する設定画面
 - コマンドとタブの「＋ プログラム」メニューからの起動
@@ -155,6 +157,9 @@ npm run tauri -- build
 | `PROGRAMS` | `PROGRAMS` / `PROGRAMS TOOLS` | 共通プログラム一覧。TOOLS / GAMES / SYSTEMで絞り込み |
 | `GAMES` | `GAMES` | 同じ一覧をゲームで絞り込んで開く |
 | `RUN` | `RUN GUESS` / `RUN CALC "(12 + 8) * 3"` | コードまたは全件一覧の番号でプログラムを起動 |
+| `GUESS` / `SNAKE` / `MINES` | `SNAKE` | 内蔵ゲームを直接起動 |
+| `BLOCKS` / `ADVENTURE` / `ROGUE` | `BLOCKS` | 内蔵ゲームを直接起動 |
+| `GAMEIMPORT` | `GAMEIMPORT C:\GAMES\EXAMPLE.RGAME.JSON` | JSONゲームプラグインを追加 |
 | `DATE` | `DATE` | 現在の日付をJSTで表示 |
 | `TIME` | `TIME` | 現在の時刻をJSTで表示 |
 
@@ -397,15 +402,32 @@ EXPORT MY-DRIVE.JSON
 | 選択中のプログラムを起動 | `Enter` |
 | ライブラリ・ゲームを終了 | `Esc` |
 
-GUESSは1から100までの秘密の数字を当てるゲームです。候補範囲、ヒント、予想履歴、試行回数を表示します。
+## v0.5 ゲーム環境
+
+ゲームは一覧、タブ右端の「＋ プログラム」、`RUN <コード>`、または各コードの直接入力から起動できます。矢印キーを中心に操作でき、`Esc`で終了します。
+
+| コード | ゲーム | 主な操作 |
+| --- | --- | --- |
+| `GUESS` | 数当て | 1〜100を入力して`Enter` |
+| `SNAKE` | ヘビゲーム | 矢印 / WASD、`Space`で一時停止 |
+| `MINES` | マインスイーパー | 矢印、`Enter`で開く、`F`で旗 |
+| `BLOCKS`（別名`TETRIS`） | 落ちものパズル | 左右移動、上で回転、`Space`でハードドロップ |
+| `ADVENTURE`（別名`ADV`） | LOST TERMINAL | `1`〜`9`で選択 |
+| `ROGUE`（別名`DUNGEON`） | ASCIIローグライク | 矢印 / WASDでターン移動 |
+
+![RetroDOSのSNAKE](docs/screenshots/games.png)
+
+ハイスコア、直近スコア、プレイ回数、勝利数、解除した実績を`retrodos.games.v1`へ自動保存します。ゲーム一覧の「スコア・実績」で全記録を確認できます。
+
+外部ゲームは、スクリプトを含まない宣言型JSONとして追加できます。実PCのJSONはゲーム一覧の「ゲーム追加」、仮想ドライブのJSONは`GAMEIMPORT`で取り込みます。標準の`C:\GAMES\EXAMPLE.RGAME.JSON`を取り込むと、サンプルの`CAVE`を`RUN CAVE`で起動できます。作成時は`GAMEPROMPT`またはゲーム一覧のボタンで[ゲーム作成プロンプト](docs/GAME-CREATION-PROMPT.md)をコピーできます。形式は[ゲームプラグインガイド](docs/GAME-PLUGINS.md)、[JSON Schema](docs/game.schema.json)、[サンプル](examples/games/hello-cave/game.json)を参照してください。
 
 ![RetroDOSのプログラム一覧](docs/screenshots/programs.png)
 
 ## プログラムの共通形式と外部開発
 
-標準10プログラムも個別の`program.json`で定義し、同じカタログから登録します。表示名・分類・コード・別名・起動先をアプリとゲームで共有しています。
+標準15プログラムも個別の`program.json`で定義し、同じカタログから登録します。表示名・分類・コード・別名・起動先をアプリとゲームで共有しています。
 
-外部プログラムはHTML・CSS・JavaScriptを含むパッケージを取り込む方針です。[定義形式と今後の実装段階](docs/PROGRAMS.md)、[JSON Schema](docs/program.schema.json)、[外部プログラムの雛形](examples/programs/hello/)を用意しました。**現在は定義の共通化まで実装済みで、外部パッケージの取り込み・実行は今後の機能です。** 標準UI本体はReactのbuiltinアダプターを使用し、将来は外部と同じWeb形式へ移行します。
+汎用の外部WebプログラムはHTML・CSS・JavaScriptを含むパッケージを取り込む方針です。[定義形式と今後の実装段階](docs/PROGRAMS.md)、[JSON Schema](docs/program.schema.json)、[外部プログラムの雛形](examples/programs/hello/)を用意しました。現在は定義の共通化までで、外部Webパッケージの取り込み・実行は今後の機能です。ゲーム向けの安全な宣言型JSONはv0.5で取り込み・実行に対応しています。
 
 ## テストと検証
 
@@ -443,7 +465,7 @@ src/
 │   ├── apps/                内蔵アプリ、共有データ、設定、式計算
 │   ├── commands/            コマンド定義、解析、実行
 │   ├── filesystem/          仮想FS、永続化、MORE、入出力
-│   ├── games/               GUESSとゲーム実行アダプター
+│   ├── games/               6ゲーム、スコア・実績、プラグイン実行環境
 │   ├── programs/            共通カタログ、標準JSON定義、一覧、起動処理
 │   └── vim/                 Vim風エディタ
 ├── hooks/                   ワークスペースと入力状態
@@ -456,6 +478,7 @@ tests/e2e/                  Playwright操作テスト
 scripts/                    デスクトップ検証と画面キャプチャ
 docs/                       実装記録とスクリーンショット
 examples/programs/          外部Webプログラムの雛形（取込・実行は今後対応）
+examples/games/             宣言型ゲームプラグインのサンプル
 ```
 
 コマンドは`src/features/commands/registry.ts`へ登録します。HELP、サイドバー、検索、補完は同じ定義を参照するため、追加内容が自動的に反映されます。
@@ -464,7 +487,7 @@ examples/programs/          外部Webプログラムの雛形（取込・実行�
 
 ## 現在の範囲
 
-v0.4.0では、シェル自動処理と仮想ファイル操作に加えて、コマンドとタブから開ける8つの内蔵アプリに対応しています。
+v0.5.0では、シェル自動処理、仮想ファイル操作、8つの内蔵アプリに加えて、6つの内蔵ゲーム、永続スコア・実績、宣言型ゲームプラグインに対応しています。
 
 次の機能は今後の対象です。
 

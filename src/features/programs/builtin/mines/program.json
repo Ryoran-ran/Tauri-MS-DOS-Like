@@ -1,0 +1,15 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.mines",
+  "code": "MINES",
+  "name": "MINES",
+  "description": "9×9の盤面から10個の地雷を見つけるマインスイーパー",
+  "version": "0.5.0",
+  "category": "games",
+  "icon": "bomb",
+  "order": 30,
+  "aliases": ["MINE"],
+  "argument": { "kind": "none" },
+  "entry": { "runtime": "builtin", "module": "mines" }
+}

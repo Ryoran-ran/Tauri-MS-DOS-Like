@@ -23,6 +23,17 @@ describe('DOS path resolution', () => {
 });
 
 describe('virtual filesystem', () => {
+  it('adds the v0.5 game example to an older saved drive without replacing user files', async () => {
+    const values = new Map<string, string>();
+    values.set('retrodos.virtual-workspace.v2', JSON.stringify({ kind: 'directory', name: 'C:', children: [
+      { kind: 'directory', name: 'GAMES', children: [{ kind: 'file', name: 'USER.TXT', content: 'keep me' }] },
+    ] }));
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    const fs = createFileSystem(storage);
+    expect(await fs.readTextFile('C:\\GAMES\\USER.TXT', 'C:\\')).toBe('keep me');
+    expect(await fs.readTextFile('C:\\GAMES\\EXAMPLE.RGAME.JSON', 'C:\\')).toContain('retrodos.game');
+    expect(values.get('retrodos.virtual-seed-version')).toBe('5');
+  });
   it('lists the initial root and reads relative/absolute text files', async () => {
     const fs = createFileSystem();
     expect((await fs.listDirectory('', 'C:\\')).map(node => node.name)).toEqual(['GAMES', 'DOCS', 'SCRIPTS', 'SYSTEM', 'README.TXT']);

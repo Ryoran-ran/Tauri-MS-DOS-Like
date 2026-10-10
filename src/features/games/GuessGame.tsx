@@ -2,11 +2,13 @@ import { ArrowLeft, ArrowDown, ArrowUp, CornerDownLeft, RotateCcw, Target, Troph
 import { useEffect, useRef, useState } from 'react';
 import { compareGuess, createSecret } from './guessLogic';
 import type { GuessResult } from './guessLogic';
+import { GameStats, useGameProfile } from './gameProfile';
 
 export interface GameProps { active: boolean; onExit: () => void }
 interface Attempt { value: number; result: GuessResult }
 
 export function GuessGame({ active, onExit }: GameProps) {
+  const { recordResult } = useGameProfile();
   const [secret, setSecret] = useState(createSecret);
   const [guess, setGuess] = useState('');
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -26,7 +28,13 @@ export function GuessGame({ active, onExit }: GameProps) {
   const submit = () => {
     const value = Number(guess);
     if (!guess.trim() || !Number.isInteger(value) || value < 1 || value > 100) { setError('1〜100の整数を入力してください。'); return; }
-    setAttempts(previous => [...previous, { value, result: compareGuess(value, secret) }]);
+    const result = compareGuess(value, secret);
+    const count = attempts.length + 1;
+    setAttempts(previous => [...previous, { value, result }]);
+    if (result === 'correct') recordResult('guess', Math.max(10, 110 - count * 10), true, [
+      { id: 'first-win', name: '数字を発見', description: 'GUESSをクリアした' },
+      ...(count <= 7 ? [{ id: 'sharp', name: '鋭い推理', description: '7回以内で正解した' }] : []),
+    ]);
     setGuess(''); setError(''); inputRef.current?.focus();
   };
 
@@ -34,6 +42,7 @@ export function GuessGame({ active, onExit }: GameProps) {
     <section className="game-view" aria-label="GUESS 数当てゲーム" hidden={!active}>
       <div className="game-topline"><button className="text-button" onClick={onExit}><ArrowLeft size={15} />ターミナルへ戻る</button><span className="game-type">BUILT-IN GAME</span></div>
       <div className="guess-game">
+        <GameStats gameId="guess" score={won ? Math.max(10, 110 - attempts.length * 10) : 0} />
         <span className={`game-symbol ${won ? 'won' : ''}`}>{won ? <Trophy size={32} /> : <Target size={32} />}</span>
         <span className="eyebrow">RETRODOS BUILT-IN PROGRAM</span>
         <h1>GUESS<span>数当てゲーム</span></h1>

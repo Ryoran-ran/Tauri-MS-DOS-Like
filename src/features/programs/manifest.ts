@@ -1,6 +1,6 @@
 import type { ProgramManifest } from './types';
 
-const modules = ['files', 'todo', 'calendar', 'calculator', 'paint', 'markdown', 'vim', 'guess', 'sysinfo', 'settings'];
+const modules = ['files', 'todo', 'calendar', 'calculator', 'paint', 'markdown', 'vim', 'guess', 'snake', 'mines', 'blocks', 'adventure', 'rogue', 'sysinfo', 'settings'];
 const argumentKinds = ['none', 'directory', 'document', 'drawing', 'markdown', 'expression'];
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 

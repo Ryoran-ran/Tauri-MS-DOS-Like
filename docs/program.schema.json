@@ -119,6 +119,11 @@
                 "markdown",
                 "vim",
                 "guess",
+                "snake",
+                "mines",
+                "blocks",
+                "adventure",
+                "rogue",
                 "sysinfo",
                 "settings"
               ]

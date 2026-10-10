@@ -12,12 +12,12 @@ import helloManifest from '../../../examples/programs/hello/program.json';
 
 const context = (): CommandContext => ({ fileSystem: createFileSystem(), shell: new ShellSession(undefined), currentDirectory: 'C:\\', now: () => new Date() });
 describe('shared program packages and launching', () => {
-  it('loads all ten standard packages and gives every command the same aliases', () => {
-    expect(programCatalog).toHaveLength(10);
-    expect(filterPrograms('tools')).toHaveLength(7); expect(filterPrograms('games')).toHaveLength(1); expect(filterPrograms('system')).toHaveLength(2);
+  it('loads all fifteen standard packages and gives every command the same aliases', () => {
+    expect(programCatalog).toHaveLength(15);
+    expect(filterPrograms('tools')).toHaveLength(7); expect(filterPrograms('games')).toHaveLength(6); expect(filterPrograms('system')).toHaveLength(2);
     for (const program of programCatalog) {
       expect(parseProgramManifest(program)).toEqual(program);
-      if (program.code !== 'GUESS') {
+      if (program.entry.module !== 'vim') {
         const command = findCommand(program.code)!;
         expect(command.aliases).toEqual(program.aliases);
         program.aliases.forEach(alias => expect(findCommand(alias)).toBe(command));
@@ -27,7 +27,7 @@ describe('shared program packages and launching', () => {
   it.each(programCatalog)('RUN $code opens the same program as its manifest', async program => {
     const result = await executeCommand(`RUN ${program.code}`, context());
     expect(result.error).toBeUndefined();
-    if (program.entry.module === 'guess') expect(result).toMatchObject({ activeView: 'game', activeGame: 'guess' });
+    if (program.category === 'games') expect(result).toMatchObject({ activeView: 'game', activeGame: program.entry.module });
     else if (program.entry.module === 'vim') expect(result).toMatchObject({ activeView: 'vim', activeDocument: 'C:\\MEMO.TXT' });
     else expect(result).toMatchObject({ activeView: program.entry.module, appLaunch: { id: program.entry.module } });
   });
@@ -44,7 +44,7 @@ describe('shared program packages and launching', () => {
   });
   it('keeps direct commands and the shared launcher equally strict', async () => {
     const ctx = context();
-    for (const line of ['RUN', 'RUN UNKNOWN', 'RUN 0', 'RUN 11', 'RUN TODO extra', 'RUN GUESS extra', 'RUN FILES one two', 'RUN PAINT DOCS', 'RUN VIM DOCS', 'RUN MARKDOWN MISSING.MD', 'PROGRAMS UNKNOWN']) {
+    for (const line of ['RUN', 'RUN UNKNOWN', 'RUN 0', 'RUN 16', 'RUN TODO extra', 'RUN GUESS extra', 'RUN FILES one two', 'RUN PAINT DOCS', 'RUN VIM DOCS', 'RUN MARKDOWN MISSING.MD', 'PROGRAMS UNKNOWN']) {
       const result = await executeCommand(line, ctx); expect(result.error, line).toBe(true); expect(result.activeView, line).toBeUndefined();
     }
     expect((await executeCommand('MD NEWDIR', ctx)).activeView).toBeUndefined();
@@ -55,10 +55,24 @@ describe('shared program packages and launching', () => {
       expect(await executeCommand(command!, context())).toMatchObject({ activeView: 'program-library', programFilter: filter });
     }
   });
+  it('provides the same game creation prompt to the terminal command', async () => {
+    const result = await executeCommand('GAMEPROMPT', context());
+    expect(result.error).toBeUndefined();
+    expect(result.clipboardText).toContain('"format": 必ず "retrodos.game"');
+    expect(result.clipboardText).toContain('作りたいゲーム：');
+  });
+  it('validates a declarative game plugin from the virtual drive', async () => {
+    const ctx = context();
+    const result = await executeCommand('GAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON', ctx);
+    expect(result.gamePluginInstall).toMatchObject({ format: 'retrodos.game', code: 'CAVE', start: 'entrance' });
+    await ctx.fileSystem.writeTextFile('BAD.JSON', 'C:\\GAMES', '{broken');
+    expect((await executeCommand('GAMEIMPORT C:\\GAMES\\BAD.JSON', ctx)).error).toBe(true);
+  });
   it('resolves codes and visible numbers after filtering, including full-width input', async () => {
     const games = filterPrograms('games');
     expect(resolveProgramSelection('１', games, 0)).toBe(0);
-    expect(resolveProgramSelection('2', games, 0)).toBeNull();
+    expect(resolveProgramSelection('2', games, 0)).toBe(1);
+    expect(resolveProgramSelection('7', games, 0)).toBeNull();
     expect(resolveProgramSelection(' guess ', games, 0)).toBe(0);
     const guessIndex = programCatalog.findIndex(program => program.code === 'GUESS');
     expect(resolveProgramSelection(String(guessIndex + 1), programCatalog, 0)).toBe(guessIndex);

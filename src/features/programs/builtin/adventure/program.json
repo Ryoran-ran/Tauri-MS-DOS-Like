@@ -1,0 +1,15 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.adventure",
+  "code": "ADVENTURE",
+  "name": "LOST TERMINAL",
+  "description": "番号キーで行動を選ぶ短編テキストアドベンチャー",
+  "version": "0.5.0",
+  "category": "games",
+  "icon": "adventure",
+  "order": 50,
+  "aliases": ["ADV"],
+  "argument": { "kind": "none" },
+  "entry": { "runtime": "builtin", "module": "adventure" }
+}

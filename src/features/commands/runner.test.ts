@@ -14,7 +14,7 @@ describe('command execution', () => {
     expect((await executeCommand('HELP CHDIR', context())).output.join('\n')).toContain('CD [パス]');
   });
   it('executes basic commands and aliases', async () => {
-    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.4.0']);
+    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.5.0']);
     expect((await executeCommand('echo "こんにちは 世界"', context())).output).toEqual(['こんにちは 世界']);
     expect((await executeCommand('ECHO', context())).output).toEqual(['']);
     expect((await executeCommand('clear', context())).clearTerminal).toBe(true);
@@ -186,8 +186,8 @@ describe('shared command discovery', () => {
   it('completes names/aliases using the same registry', () => {
     expect(completeCommand('he')).toEqual(['HELP']);
     expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'COMMAND', 'CALL', 'CD', 'CHDIR', 'COPY', 'CALENDAR', 'CAL', 'CALC']);
-    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE', 'MARKDOWN', 'MDVIEW']);
-    expect(completeCommand('R')).toEqual(['RMDIR', 'RD', 'REN', 'RENAME', 'RUN']);
+    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE', 'MARKDOWN', 'MDVIEW', 'MINES', 'MINE']);
+    expect(completeCommand('R')).toEqual(['RMDIR', 'RD', 'REN', 'RENAME', 'RUN', 'ROGUE']);
     expect(completeCommand('CD DOC')).toEqual([]);
     expect(completeCommand('')).toEqual([]);
   });

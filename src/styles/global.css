@@ -68,9 +68,9 @@ h1, h2, h3, p { margin: 0; }
 .command-group + .command-group { margin-top: 12px; }
 .command-group h3 { display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 6px 0; color: #98ab9e; font-size: 10px; font-weight: 500; letter-spacing: .5px; }
 .command-group h3 span { margin-left: auto; font: 9px var(--mono); color: #718679; }
-.command-item { width: 100%; display: flex; align-items: center; gap: 13px; border: 1px solid transparent; border-radius: 6px; padding: 7px 10px; text-align: left; }
-.command-item code { width: 44px; color: #d1e5d8; font-size: 12px; font-weight: 600; }
-.command-item > span { color: #a5b2a9; font-size: 11px; }
+.command-item { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; border: 1px solid transparent; border-radius: 6px; padding: 7px 10px; text-align: left; }
+.command-item code { flex: 0 0 auto; min-width: 11ch; max-width: 100%; overflow-wrap: anywhere; color: #d1e5d8; font-size: 12px; font-weight: 600; }
+.command-item > span { flex: 1 1 90px; min-width: 0; overflow-wrap: anywhere; color: #a5b2a9; font-size: 11px; }
 .command-item:hover { background: #1d2721; }
 .command-item.selected { background: #203629; border-color: #334e3e; }
 .command-item.selected code { color: var(--green); }

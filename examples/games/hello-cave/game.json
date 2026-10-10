@@ -1,0 +1,27 @@
+{
+  "format": "retrodos.game",
+  "manifestVersion": 1,
+  "id": "hello-cave",
+  "code": "CAVE",
+  "name": "HELLO CAVE",
+  "description": "ゲームプラグイン形式の短いサンプル",
+  "version": "1.0.0",
+  "author": "RetroDOS User",
+  "start": "entrance",
+  "scenes": [
+    {
+      "id": "entrance",
+      "title": "洞窟の入口",
+      "text": "青い光が奥から漏れている。",
+      "choices": [
+        { "label": "奥へ進む", "to": "goal", "score": 100 },
+        { "label": "引き返す", "to": "leave" }
+      ]
+    },
+    { "id": "goal", "title": "青い端末", "text": "端末に HELLO, PLAYER! と表示された。", "choices": [], "ending": "win" },
+    { "id": "leave", "title": "帰還", "text": "安全を優先して町へ戻った。", "choices": [], "ending": "lose" }
+  ],
+  "achievements": [
+    { "id": "found-terminal", "name": "洞窟の端末", "description": "青い端末を発見した", "scene": "goal" }
+  ]
+}

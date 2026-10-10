@@ -2,6 +2,8 @@ import { programCatalog } from '../programs/catalog';
 import { launchProgram } from '../programs/launch';
 import { resolveProgramSelection } from '../programs/selection';
 import type { ProgramFilter } from '../programs/types';
+import { findInstalledGamePlugin, parseGamePlugin } from '../games/gamePlugin';
+import { gameCreationPrompt } from '../games/gameCreationPrompt';
 import type { CommandDefinition } from './types';
 
 export const programCommands: CommandDefinition[] = [
@@ -22,6 +24,12 @@ export const programCommands: CommandDefinition[] = [
     execute: () => ({ output: ['プログラム一覧（ゲーム）を開きました。'], activeView: 'program-library', programFilter: 'games' }),
   },
   {
+    name: 'GAMEPROMPT', displayName: 'ゲーム作成プロンプトをコピー', aliases: [], category: 'programs',
+    description: '分岐型ゲームのJSONをAIに作成してもらうためのプロンプトをクリップボードにコピーします。',
+    usage: 'GAMEPROMPT', examples: ['GAMEPROMPT'], arguments: [],
+    execute: () => ({ output: [], clipboardText: gameCreationPrompt }),
+  },
+  {
     name: 'RUN', displayName: 'プログラムを起動', aliases: [], category: 'programs',
     description: 'ツール・ゲーム・システムを共通のコードまたは全件一覧の番号で起動します。引数をそのままプログラムに渡します。',
     usage: 'RUN <コード|番号> [引数...]', examples: ['RUN GUESS', 'RUN CALC "(12 + 8) * 3"', 'RUN VIM MEMO.TXT'],
@@ -29,8 +37,27 @@ export const programCommands: CommandDefinition[] = [
     execute: (args, context) => {
       const index = resolveProgramSelection(args[0]!, programCatalog, 0);
       const program = index === null ? undefined : programCatalog[index];
-      if (!program) return { error: true, output: [`プログラムが見つかりません: ${args[0]}`, 'PROGRAMS で利用可能なプログラムを確認してください。'] };
+      if (!program) {
+        const plugin = findInstalledGamePlugin(args[0]!);
+        if (plugin && args.length === 1) return { output: [`ゲームプラグイン ${plugin.code} を起動しました。`], activeView: 'game', activeGame: `plugin:${plugin.id}` };
+        return { error: true, output: [`プログラムが見つかりません: ${args[0]}`, 'PROGRAMS で利用可能なプログラムを確認してください。'] };
+      }
       return launchProgram(program, args.slice(1), context);
+    },
+  },
+  {
+    name: 'GAMEIMPORT', displayName: 'ゲーム追加', aliases: ['GAMEADD'], category: 'programs',
+    description: '仮想ドライブ上のretrodos.game形式JSONを検証し、ゲーム一覧へ追加します。HTMLやスクリプトは実行しません。',
+    usage: 'GAMEIMPORT <JSONファイル>', examples: ['GAMEIMPORT C:\\GAMES\\MYGAME.JSON'],
+    arguments: [{ name: 'JSONファイル', description: 'ゲームプラグイン定義の仮想ファイルパス', required: true }],
+    execute: async (args, context) => {
+      const source = await context.fileSystem.readTextFile(args[0]!, context.currentDirectory);
+      if (source.length > 256_000) return { error: true, output: ['ゲームプラグインは256KB以下にしてください。'] };
+      let value: unknown;
+      try { value = JSON.parse(source); } catch { return { error: true, output: ['ゲームプラグインのJSONを読み取れません。'] }; }
+      const plugin = parseGamePlugin(value);
+      if (programCatalog.some(program => program.code === plugin.code || program.aliases.includes(plugin.code))) return { error: true, output: [`標準プログラムとコードが重複しています: ${plugin.code}`] };
+      return { output: [`ゲームプラグインを追加しました: ${plugin.code} — ${plugin.name}`, `RUN ${plugin.code} で起動できます。`], gamePluginInstall: plugin };
     },
   },
 ];

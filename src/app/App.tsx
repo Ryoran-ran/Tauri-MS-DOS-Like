@@ -17,6 +17,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { BuiltinApps } from '../features/apps/BuiltinApps';
 import { PersonalDataProvider } from '../features/apps/personalData';
 import { decodeSettings, defaultSettings, useStoredState } from '../features/apps/storage';
+import { GameProfileProvider } from '../features/games/gameProfile';
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -105,7 +106,7 @@ export function App() {
       <TitleBar activeView={activeView} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <div className="app-body">
         {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onClose={closeSidebar} searchRef={searchRef} /></>}
-        <main className="workspace" inert={narrow && sidebarOpen}>
+        <GameProfileProvider><main className="workspace" inert={narrow && sidebarOpen}>
           <WorkspaceTabs activeView={activeView} openViews={workspace.openViews} activeDocument={workspace.activeDocument} pagerPath={workspace.pager?.path} activeGame={workspace.activeGame} onNavigate={navigate} onClose={closeWorkspaceView} onLaunchCommand={command => { void runCommand(command); }} />
           <Terminal active={activeView === 'terminal'} entries={workspace.terminalEntries} directory={workspace.currentDirectory} busy={workspace.busy} history={workspace.commandHistory} execute={workspace.runCommand} additionalCommands={workspace.shellCommandNames} commandInputRef={commandInputRef} onInsert={insert} followEnabled={settings.followOutput} />
           <VimEditor active={activeView === 'vim'} path={workspace.activeDocument} fileSystem={workspace.fileSystem} closeRequest={vimCloseRequest} onExit={closeVim} onOpenDocument={workspace.openDocument} />
@@ -114,7 +115,7 @@ export function App() {
           {workspace.openViews.includes('program-library') && <ProgramLibrary key={workspace.programLibraryLaunch.request} active={activeView === 'program-library'} initialFilter={workspace.programLibraryLaunch.filter} onLaunch={launchProgram} onBack={closeProgramLibrary} />}
           {workspace.openViews.includes('game') && workspace.activeGame && <GameHost id={workspace.activeGame} active={activeView === 'game'} onExit={exitGame} />}
           <PersonalDataProvider><BuiltinApps activeView={activeView} openViews={workspace.openViews} closeView={closeView} fileSystem={workspace.fileSystem} fileRevision={workspace.fileRevision} appLaunches={workspace.appLaunches} runCommand={runCommand} settings={settings} setSettings={setSettings} storageError={storageError} /></PersonalDataProvider>
-        </main>
+        </main></GameProfileProvider>
       </div>
       <StatusBar directory={workspace.currentDirectory} status={workspace.status} />
     </div>
