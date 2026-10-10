@@ -1,0 +1,22 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.markdown",
+  "code": "MARKDOWN",
+  "name": "Markdownビューア",
+  "description": "文書を読みやすく表示",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "markdown",
+  "order": 60,
+  "aliases": [
+    "MDVIEW"
+  ],
+  "argument": {
+    "kind": "markdown"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "markdown"
+  }
+}

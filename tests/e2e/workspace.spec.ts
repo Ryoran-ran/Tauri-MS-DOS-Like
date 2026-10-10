@@ -13,7 +13,7 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const log = page.getByRole('log');
-  await expect(log).toContainText('RetroDOS Version 0.3.0');
+  await expect(log).toContainText('RetroDOS Version 0.4.0');
   await commandInput(page).evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(commandInput(page)).toBeFocused();
@@ -75,7 +75,7 @@ test('search, details and insertion do not execute automatically', async ({ page
   await search.fill('no-results');
   await expect(page.getByText('コマンドが見つかりません', { exact: true })).toBeVisible();
   await search.fill('');
-  await expect(page.locator('.command-item')).toHaveCount(30);
+  await expect(page.locator('.command-item')).toHaveCount(39);
 });
 
 test('file operations support copy, rename, move and deletion', async ({ page }) => {
@@ -115,7 +115,7 @@ test('file commands support discovery, paging, wildcard undo and drive transfer'
   await run(page, 'MORE DOCS\\COMMANDS.TXT');
   const pager = page.getByRole('region', { name: 'MOREページャー' });
   await expect(pager).toBeVisible();
-  await expect(pager).toContainText('RetroDOS v0.3 コマンドガイド');
+  await expect(pager).toContainText('RetroDOS v0.4 コマンドガイド');
   await page.keyboard.press('End');
   await page.keyboard.press('Escape');
   await expect(commandInput(page)).toBeFocused();
@@ -225,6 +225,65 @@ test('Vim editor supports modal keyboard editing, saving and quitting', async ({
   await expect(page.getByRole('log')).toContainText('RetroDOS Vim memo\nsecond line');
 });
 
+test('Vim supports line yank and paste, redo, search, options and editing another file', async ({ page }) => {
+  await run(page, 'VIM SOURCE.TXT');
+  const vim = page.getByRole('region', { name: 'VIMメモ帳' });
+  const editor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  const ex = async (value: string) => {
+    await editor.press('Shift+;');
+    const command = page.getByRole('textbox', { name: 'Vimコマンド' });
+    await command.fill(value); await command.press('Enter');
+  };
+
+  await editor.press('i');
+  await editor.fill('alpha\nbeta alpha\ngamma');
+  await editor.press('Escape');
+  await editor.press('Home'); await editor.press('k');
+  await editor.press('y'); await editor.press('y');
+  await expect(vim).toContainText('1行ヤンクしました');
+  await editor.press('p');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await editor.press('u');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma');
+  await editor.press('Control+r');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await expect.poll(() => editor.evaluate(element => (element as HTMLTextAreaElement).selectionStart)).toBe(17);
+  await editor.press('d'); await editor.press('d');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma');
+  await editor.press('p');
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma\nbeta alpha');
+
+  await editor.press('/');
+  const search = page.getByRole('textbox', { name: 'Vim検索' });
+  await expect(search).toBeFocused();
+  await search.fill('alpha'); await search.press('Enter');
+  await expect.poll(() => editor.evaluate(element => {
+    const input = element as HTMLTextAreaElement;
+    return input.value.slice(input.selectionStart, input.selectionEnd);
+  })).toBe('alpha');
+  await editor.press('n'); await expect(vim).toContainText('/alpha');
+  await editor.press('Shift+n'); await expect(vim).toContainText('?alpha');
+
+  await ex('set nonumber');
+  await expect(vim.locator('.vim-line-numbers')).toHaveCount(0);
+  await ex('set number');
+  await expect(vim.locator('.vim-line-numbers')).toBeVisible();
+  await ex('w');
+
+  await ex('e OTHER.TXT');
+  await expect(page.getByRole('tab', { name: 'OTHER.TXT', exact: true })).toBeVisible();
+  await expect(editor).toHaveValue('');
+  await editor.press('i'); await editor.fill('unsaved other file'); await editor.press('Escape');
+  await ex('e SOURCE.TXT');
+  await expect(page.getByRole('alert')).toContainText('保存されていません');
+  await expect(page.getByRole('tab', { name: 'OTHER.TXT', exact: true })).toBeVisible();
+  await ex('e! SOURCE.TXT');
+  await expect(page.getByRole('tab', { name: 'SOURCE.TXT', exact: true })).toBeVisible();
+  await expect(editor).toHaveValue('alpha\nbeta alpha\ngamma\nbeta alpha');
+  await ex('q');
+  await expect(commandInput(page)).toBeFocused();
+});
+
 test('task tabs show only open apps and keep background tasks available', async ({ page }) => {
   const tabs = page.locator('.workspace-tabs');
   await expect(tabs.locator('.workspace-tab')).toHaveCount(1);
@@ -307,8 +366,8 @@ test('history restores drafts, completion supports keyboard and Escape', async (
 
 test('library, GUESS validation, win, replay and exit', async ({ page }) => {
   await run(page, 'GAMES');
-  await expect(page.getByRole('region', { name: 'ゲームライブラリ画面' })).toBeVisible();
-  await expect(page.getByRole('article')).toContainText('built-in');
+  await expect(page.getByRole('region', { name: 'プログラム一覧画面' })).toBeVisible();
+  await expect(page.getByRole('article')).toContainText('標準プログラム');
   await page.getByRole('button', { name: '起動', exact: true }).click();
   const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
   const number = page.getByRole('spinbutton', { name: '予想する数字' });
@@ -343,7 +402,7 @@ test('library, GUESS validation, win, replay and exit', async ({ page }) => {
 });
 
 test('game library supports code, number and arrow-only keyboard selection', async ({ page }) => {
-  const selector = page.getByRole('textbox', { name: 'ゲームコードまたは番号' });
+  const selector = page.getByRole('textbox', { name: 'プログラムコードまたは番号' });
   const game = page.getByRole('region', { name: 'GUESS 数当てゲーム' });
 
   await run(page, 'GAMES');
@@ -353,7 +412,7 @@ test('game library supports code, number and arrow-only keyboard selection', asy
   await expect(selector).toBeFocused();
   await selector.fill('UNKNOWN');
   await selector.press('Enter');
-  await expect(page.getByRole('alert')).toContainText('ゲームが見つかりません');
+  await expect(page.getByRole('alert')).toContainText('プログラムが見つかりません');
 
   await selector.fill('guess');
   await selector.press('Enter');

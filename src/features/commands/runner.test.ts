@@ -14,7 +14,7 @@ describe('command execution', () => {
     expect((await executeCommand('HELP CHDIR', context())).output.join('\n')).toContain('CD [パス]');
   });
   it('executes basic commands and aliases', async () => {
-    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.3.0']);
+    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.4.0']);
     expect((await executeCommand('echo "こんにちは 世界"', context())).output).toEqual(['こんにちは 世界']);
     expect((await executeCommand('ECHO', context())).output).toEqual(['']);
     expect((await executeCommand('clear', context())).clearTerminal).toBe(true);
@@ -83,7 +83,7 @@ describe('command execution', () => {
     expect((await executeCommand('VIM C:\\MISSING\\NOTE.TXT', ctx)).error).toBe(true);
   });
   it('returns state changes for library and games', async () => {
-    expect((await executeCommand('GAMES', context())).activeView).toBe('game-library');
+    expect(await executeCommand('GAMES', context())).toMatchObject({ activeView: 'program-library', programFilter: 'games' });
     expect(await executeCommand('RUN guess', context())).toMatchObject({ activeView: 'game', activeGame: 'guess' });
     expect((await executeCommand('RUN doom', context())).error).toBe(true);
   });
@@ -185,8 +185,8 @@ describe('shared command discovery', () => {
   });
   it('completes names/aliases using the same registry', () => {
     expect(completeCommand('he')).toEqual(['HELP']);
-    expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'COMMAND', 'CALL', 'CD', 'CHDIR', 'COPY']);
-    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE']);
+    expect(completeCommand('C')).toEqual(['CLS', 'CLEAR', 'COMMAND', 'CALL', 'CD', 'CHDIR', 'COPY', 'CALENDAR', 'CAL', 'CALC']);
+    expect(completeCommand('M')).toEqual(['MKDIR', 'MD', 'MOVE', 'MORE', 'MARKDOWN', 'MDVIEW']);
     expect(completeCommand('R')).toEqual(['RMDIR', 'RD', 'REN', 'RENAME', 'RUN']);
     expect(completeCommand('CD DOC')).toEqual([]);
     expect(completeCommand('')).toEqual([]);

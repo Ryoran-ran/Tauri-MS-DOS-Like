@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello RetroDOS</title>
+  <style>
+    body { margin: 0; padding: 24px; background: #0000aa; color: #fff; font: 14px/1.6 monospace; }
+    main { max-width: 560px; padding: 20px; border: 4px double #fff; background: #c0c0c0; color: #000; }
+    h1 { margin-top: 0; color: #000080; }
+    button { padding: 8px 16px; background: #55ffff; color: #000; border: 2px solid; border-color: #fff #555 #555 #fff; font: inherit; }
+    button:focus-visible { outline: 3px solid #000080; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Hello RetroDOS</h1>
+    <p>HTML・CSS・JavaScriptで外部プログラムを作るための雛形です。</p>
+    <p>RetroDOSへの取り込み・実行ホストは今後実装予定です。このページは単独でも確認できます。</p>
+    <button type="button" id="count">クリック数: 0</button>
+  </main>
+  <script>
+    let count = 0;
+    document.getElementById('count').addEventListener('click', event => { event.currentTarget.textContent = `クリック数: ${++count}`; });
+  </script>
+</body>
+</html>

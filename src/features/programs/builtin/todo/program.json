@@ -1,0 +1,20 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.todo",
+  "code": "TODO",
+  "name": "ToDoリスト",
+  "description": "タスクと期限を管理",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "todo",
+  "order": 20,
+  "aliases": [],
+  "argument": {
+    "kind": "none"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "todo"
+  }
+}

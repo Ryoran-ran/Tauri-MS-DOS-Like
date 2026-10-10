@@ -4,6 +4,8 @@ import { executeCommand } from '../features/commands/runner';
 import { ShellSession } from '../features/commands/shellState';
 import { createFileSystem } from '../features/filesystem/filesystem';
 import type { ActiveView, ExecutionStatus, TerminalEntry } from '../types/workspace';
+import type { BuiltinAppId } from '../features/apps/catalog';
+import type { ProgramFilter } from '../features/programs/types';
 
 export function useWorkspace() {
   const [fileSystem] = useState(createFileSystem);
@@ -24,6 +26,9 @@ export function useWorkspace() {
   const [pager, setPager] = useState<{ path: string; content: string } | null>(null);
   const [status, setStatus] = useState<ExecutionStatus>('READY');
   const [busy, setBusy] = useState(false);
+  const [appLaunches, setAppLaunches] = useState<Partial<Record<BuiltinAppId, { path?: string; expression?: string; request: number }>>>({});
+  const [fileRevision, setFileRevision] = useState(0);
+  const [programLibraryLaunch, setProgramLibraryLaunch] = useState<{ filter: ProgramFilter; request: number }>({ filter: 'all', request: 0 });
 
   const runCommand = useCallback(async (input: string) => {
     if (!input.trim() || executing.current) return;
@@ -44,12 +49,18 @@ export function useWorkspace() {
       }
       if (result.activeGame) setActiveGame(result.activeGame);
       if (result.activeDocument) setActiveDocument(result.activeDocument);
+      if (result.programFilter) setProgramLibraryLaunch(current => ({ filter: result.programFilter!, request: current.request + 1 }));
+      if (result.appLaunch) {
+        const launch = result.appLaunch;
+        setAppLaunches(current => ({ ...current, [launch.id]: { ...launch, request: (current[launch.id]?.request ?? 0) + 1 } }));
+      }
       if (result.pager) setPager(result.pager);
       if (result.download) downloadFile(result.download.fileName, result.download.content, result.download.mimeType);
       setStatus(result.error ? 'ERROR' : result.activeGame ? 'RUNNING' : 'READY');
     } finally {
       executing.current = false;
       setBusy(false);
+      setFileRevision(revision => revision + 1);
     }
   }, [currentDirectory, fileSystem, shell]);
 
@@ -58,6 +69,7 @@ export function useWorkspace() {
     setStatus('RUNNING');
     try {
       await fileSystem.importData(data);
+      setFileRevision(revision => revision + 1);
       setCurrentDirectory('C:\\');
       setOpenViews(views => views.filter(view => view !== 'import'));
       setActiveView('terminal');
@@ -85,12 +97,18 @@ export function useWorkspace() {
     setActiveView(view);
   }, []);
 
+  const openDocument = useCallback((path: string) => {
+    setActiveDocument(path);
+    setOpenViews(views => views.includes('vim') ? views : [...views, 'vim']);
+    setActiveView('vim');
+  }, []);
+
   const closeView = useCallback((view: Exclude<ActiveView, 'terminal'>) => {
     setOpenViews(views => views.filter(openView => openView !== view));
     setActiveView(current => current === view ? 'terminal' : current);
   }, []);
 
-  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, shellCommandNames: shell.completionNames(), runCommand, importDrive, exitGame, navigate, closeView };
+  return { fileSystem, currentDirectory, commandHistory, terminalEntries, activeView, openViews, activeGame, activeDocument, pager, status, busy, appLaunches, fileRevision, programLibraryLaunch, shellCommandNames: shell.completionNames(), runCommand, importDrive, exitGame, navigate, openDocument, closeView };
 }
 
 function downloadFile(fileName: string, content: string, mimeType: string): void {

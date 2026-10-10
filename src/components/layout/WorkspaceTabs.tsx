@@ -1,7 +1,11 @@
-import { BookOpenText, FileInput, FileText, Gamepad2, Library, Terminal, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { BookOpenText, FileInput, FileText, Gamepad2, Library, Plus, Terminal, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { ActiveView } from '../../types/workspace';
+import { findBuiltinApp } from '../../features/apps/catalog';
+import { filterPrograms } from '../../features/programs/catalog';
+import { getProgramIcon } from '../../features/programs/icons';
+import { programCategories } from '../../features/programs/types';
 
 interface Props {
   activeView: ActiveView;
@@ -11,10 +15,21 @@ interface Props {
   activeGame: string | null;
   onNavigate: (view: ActiveView) => void;
   onClose: (view: Exclude<ActiveView, 'terminal'>) => void;
+  onLaunchCommand: (command: string) => void;
 }
 
-export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath, activeGame, onNavigate, onClose }: Props) {
+export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath, activeGame, onNavigate, onClose, onLaunchCommand }: Props) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const launcherRef = useRef<HTMLDivElement>(null);
+  const launcherButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!launcherOpen) return;
+    launcherRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    const dismiss = (event: PointerEvent) => { if (!launcherRef.current?.contains(event.target as Node)) setLauncherOpen(false); };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [launcherOpen]);
 
   useEffect(() => {
     const index = openViews.indexOf(activeView);
@@ -34,7 +49,8 @@ export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath
   };
 
   return (
-    <nav className="workspace-tabs" aria-label="実行中のアプリ" role="tablist" title="Ctrl+Tab: 次のタブ / Ctrl+Shift+Tab: 前のタブ">
+    <div className="workspace-tab-strip">
+    <nav className="workspace-tabs" aria-label="実行中のプログラム" role="tablist" title="Ctrl+Tab: 次のタブ / Ctrl+Shift+Tab: 前のタブ">
       {openViews.map((view, index) => {
         const tab = getTab(view, activeDocument, pagerPath, activeGame);
         const Icon = tab.icon;
@@ -60,10 +76,32 @@ export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath
         );
       })}
     </nav>
+    <div className="app-launcher" ref={launcherRef} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setLauncherOpen(false); }}>
+      <button ref={launcherButton} className="app-launcher-button" aria-label="プログラムを開く" aria-haspopup="menu" aria-expanded={launcherOpen} onClick={() => setLauncherOpen(open => !open)}><Plus size={18} /><span>プログラム</span></button>
+      {launcherOpen && <div className="app-launcher-menu" role="menu" aria-label="プログラム" onKeyDown={event => {
+        const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        if (event.key === 'Escape') { event.preventDefault(); setLauncherOpen(false); launcherButton.current?.focus(); }
+        else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          event.preventDefault();
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+          items[next]?.focus();
+        }
+      }}>
+        {programCategories.map(category => <div key={category.id} role="group" aria-label={category.label}>
+          <p className="program-menu-category">{category.label}</p>
+          {filterPrograms(category.id).map(program => { const Icon = getProgramIcon(program.icon); return <button key={program.id} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`RUN ${program.code}`); }}><Icon size={16} /><span>{program.name}<small>{program.description}</small></span><code>{program.code}</code></button>; })}
+        </div>)}
+        <button role="menuitem" className="program-menu-library" onClick={() => { setLauncherOpen(false); onLaunchCommand('PROGRAMS'); }}><Library size={16} /><span>プログラム一覧<small>コード・番号・矢印で選択</small></span></button>
+      </div>}
+    </div>
+    </div>
   );
 }
 
 function getTab(view: ActiveView, activeDocument: string, pagerPath: string | undefined, activeGame: string | null) {
+  const app = findBuiltinApp(view);
+  if (app) return { label: app.name, title: `${app.name} - ${app.command}`, icon: app.icon };
   if (view === 'terminal') return { label: 'ターミナル', title: 'ターミナル', icon: Terminal };
   if (view === 'vim') {
     const fileName = baseName(activeDocument);
@@ -74,7 +112,7 @@ function getTab(view: ActiveView, activeDocument: string, pagerPath: string | un
     return { label: fileName, title: `${pagerPath ?? fileName} - MORE`, icon: BookOpenText };
   }
   if (view === 'import') return { label: 'ドライブ取込', title: '仮想ドライブ取り込み', icon: FileInput };
-  if (view === 'game-library') return { label: 'ゲームライブラリ', title: 'ゲームライブラリ', icon: Library };
+  if (view === 'program-library') return { label: 'プログラム一覧', title: 'プログラム一覧', icon: Library };
   return { label: activeGame?.toUpperCase() ?? 'ゲーム', title: '起動中のゲーム', icon: Gamepad2 };
 }
 

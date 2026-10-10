@@ -1,16 +1,20 @@
 import { APP_VERSION } from '../../app/constants';
-import { findGame } from '../games/catalog';
+import { appCommands } from './appCommands';
+import { programCommands } from './programCommands';
+import { findProgram } from '../programs/catalog';
+import { launchProgram } from '../programs/launch';
 import type { CommandCategory, CommandContext, CommandDefinition, CommandResult } from './types';
 
 export const commandCategories: { id: CommandCategory; label: string }[] = [
   { id: 'basic', label: '基本操作' },
   { id: 'files', label: 'ファイル操作' },
   { id: 'shell', label: 'シェル' },
-  { id: 'games', label: 'ゲーム' },
+  { id: 'programs', label: 'プログラム' },
   { id: 'system', label: 'システム' },
 ];
 
 const output = (...lines: string[]): CommandResult => ({ output: lines });
+const vimProgram = findProgram('VIM')!;
 
 export const commands: readonly CommandDefinition[] = [
   {
@@ -287,35 +291,13 @@ export const commands: readonly CommandDefinition[] = [
     execute: async (args, context) => output(await context.fileSystem.readTextFile(args[0]!, context.currentDirectory)),
   },
   {
-    name: 'VIM', displayName: 'メモ帳 (Vim)', aliases: ['EDIT'], category: 'files',
+    name: vimProgram.code, displayName: vimProgram.name, aliases: vimProgram.aliases, category: 'files',
     description: 'Vim風エディタで仮想テキストファイルを開きます。ファイルがなければ保存時に新規作成します。',
     usage: 'VIM [ファイルパス]', examples: ['VIM', 'VIM MEMO.TXT', 'VIM "C:\\DOCS\\MY NOTE.TXT"'],
     arguments: [{ name: 'ファイルパス', description: '編集するファイル。省略時はMEMO.TXT', required: false }],
-    execute: async (args, context) => {
-      const path = context.fileSystem.resolvePath(args[0] ?? 'MEMO.TXT', context.currentDirectory);
-      const separator = path.lastIndexOf('\\');
-      const parent = separator === 2 ? 'C:\\' : path.slice(0, separator);
-      await context.fileSystem.getDirectory(parent, 'C:\\');
-      return { output: [`${path} をVimで開きました。`], activeView: 'vim', activeDocument: path };
-    },
+    execute: (args, context) => launchProgram(vimProgram, args, context),
   },
-  {
-    name: 'GAMES', displayName: 'ゲームライブラリ', aliases: [], category: 'games',
-    description: 'ゲームライブラリを開き、利用可能なゲームを探します。', usage: 'GAMES', examples: ['GAMES'], arguments: [],
-    execute: () => ({ output: ['ゲームライブラリを開きました。'], activeView: 'game-library' }),
-  },
-  {
-    name: 'RUN', displayName: 'ゲームを起動', aliases: [], category: 'games',
-    description: '指定した内蔵ゲームを起動します。GUESSで数当てゲームを遊べます。',
-    usage: 'RUN <ゲーム名>', examples: ['RUN GUESS'],
-    arguments: [{ name: 'ゲーム名', description: '起動するゲームの識別名', required: true }],
-    execute: args => {
-      const game = findGame(args[0]!);
-      if (!game) return { error: true, output: [`ゲームが見つかりません: ${args[0]}`, 'GAMES で利用可能なゲームを確認してください。'] };
-      if (game.type !== 'built-in') return { error: true, output: ['外部ゲームの実行は、このバージョンでは未対応です。'] };
-      return { output: [`${game.name} を起動しました。`], activeView: 'game', activeGame: game.id };
-    },
-  },
+  ...programCommands,
   {
     name: 'DATE', displayName: '日付を表示', aliases: [], category: 'system',
     description: '現在の日付を日本標準時（JST）で表示します。', usage: 'DATE', examples: ['DATE'], arguments: [],
@@ -326,6 +308,7 @@ export const commands: readonly CommandDefinition[] = [
     description: '現在の時刻を日本標準時（JST）で表示します。', usage: 'TIME', examples: ['TIME'], arguments: [],
     execute: (_, context) => output(`現在の時刻 (JST): ${context.now().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })}`),
   },
+  ...appCommands,
 ];
 
 export function findCommand(name: string): CommandDefinition | undefined {

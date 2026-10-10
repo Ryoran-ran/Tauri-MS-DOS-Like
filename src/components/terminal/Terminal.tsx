@@ -19,9 +19,10 @@ interface Props {
   additionalCommands: readonly string[];
   commandInputRef: Ref<TerminalInputHandle>;
   onInsert: (text: string) => void;
+  followEnabled?: boolean;
 }
 
-export function Terminal({ active, entries, directory, busy, history, execute, additionalCommands, commandInputRef, onInsert }: Props) {
+export function Terminal({ active, entries, directory, busy, history, execute, additionalCommands, commandInputRef, onInsert, followEnabled = true }: Props) {
   const logRef = useRef<HTMLDivElement>(null);
   const followOutput = useRef(true);
   const [unread, setUnread] = useState(false);
@@ -37,11 +38,11 @@ export function Terminal({ active, entries, directory, busy, history, execute, a
   useLayoutEffect(() => {
     const log = logRef.current;
     if (!active || !log) return;
-    if (!followOutput.current) { setUnread(true); return; }
+    if (!followOutput.current || !followEnabled) { setUnread(true); return; }
     scrollToLatest();
     const frame = requestAnimationFrame(scrollToLatest);
     return () => cancelAnimationFrame(frame);
-  }, [active, entries, scrollToLatest]);
+  }, [active, entries, followEnabled, scrollToLatest]);
 
   const jumpToLatest = scrollToLatest;
 
@@ -68,7 +69,7 @@ export function Terminal({ active, entries, directory, busy, history, execute, a
         </div>
         <TerminalCommandInput ref={commandInputRef} active={active} busy={busy} directory={directory} history={history} execute={execute} additionalCommands={additionalCommands} />
       </div>
-      <div className="terminal-bottom"><div className="quick-commands"><span>まずは</span>{['HELP', 'DIR', 'GAMES'].map(command => <button key={command} onClick={() => onInsert(command)}>{command}<ArrowUpRight size={12} /></button>)}</div><span className="keyboard-hint"><kbd>Space</kbd> 入力<span>·</span><kbd>↑</kbd><kbd>↓</kbd> 履歴<span>·</span><kbd>Tab</kbd> 補完</span></div>
+      <div className="terminal-bottom"><div className="quick-commands"><span>まずは</span>{['HELP', 'DIR', 'PROGRAMS'].map(command => <button key={command} onClick={() => onInsert(command)}>{command}<ArrowUpRight size={12} /></button>)}</div><span className="keyboard-hint"><kbd>Space</kbd> 入力<span>·</span><kbd>↑</kbd><kbd>↓</kbd> 履歴<span>·</span><kbd>Tab</kbd> 補完</span></div>
     </section>
   );
 }

@@ -1,0 +1,20 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.settings",
+  "code": "SETTINGS",
+  "name": "設定",
+  "description": "表示と操作をカスタマイズ",
+  "version": "0.4.0",
+  "category": "system",
+  "icon": "settings",
+  "order": 20,
+  "aliases": [],
+  "argument": {
+    "kind": "none"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "settings"
+  }
+}

@@ -3,6 +3,11 @@ export interface TextEdit {
   cursor: number;
 }
 
+export interface ExCommand {
+  name: string;
+  argument: string;
+}
+
 export function moveCursorVertically(text: string, cursor: number, direction: -1 | 1): number {
   const position = Math.max(0, Math.min(cursor, text.length));
   const lineStart = text.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
@@ -47,5 +52,48 @@ export function openLineBelow(text: string, cursor: number): TextEdit {
   if (nextBreak === -1) return { text: `${text}\n`, cursor: text.length + 1 };
   const insertion = nextBreak + 1;
   return { text: text.slice(0, insertion) + '\n' + text.slice(insertion), cursor: insertion };
+}
+
+export function currentLineText(text: string, cursor: number): string {
+  if (!text) return '';
+  const position = Math.max(0, Math.min(cursor, text.length));
+  const start = text.lastIndexOf('\n', Math.max(0, position - 1)) + 1;
+  const nextBreak = text.indexOf('\n', start);
+  return text.slice(start, nextBreak === -1 ? text.length : nextBreak);
+}
+
+export function pasteLineBelow(text: string, cursor: number, line: string): TextEdit {
+  if (!text) return { text: line, cursor: 0 };
+  const position = Math.max(0, Math.min(cursor, text.length));
+  const nextBreak = text.indexOf('\n', position);
+  if (nextBreak === -1) return { text: `${text}\n${line}`, cursor: text.length + 1 };
+  const insertion = nextBreak + 1;
+  return { text: text.slice(0, insertion) + line + '\n' + text.slice(insertion), cursor: insertion };
+}
+
+export function findSearchMatch(text: string, query: string, cursor: number, direction: -1 | 1): number | null {
+  if (!query || !text) return null;
+  const position = Math.max(0, Math.min(cursor, text.length));
+  if (direction === 1) {
+    const after = text.indexOf(query, Math.min(text.length, position + 1));
+    if (after !== -1) return after;
+    const wrapped = text.indexOf(query);
+    return wrapped === -1 ? null : wrapped;
+  }
+  const before = position > 0 ? text.lastIndexOf(query, position - 1) : -1;
+  if (before !== -1) return before;
+  const wrapped = text.lastIndexOf(query);
+  return wrapped === -1 ? null : wrapped;
+}
+
+export function parseExCommand(value: string): ExCommand {
+  const normalized = value.trim().replace(/^:/, '');
+  const space = normalized.search(/\s/);
+  const name = (space === -1 ? normalized : normalized.slice(0, space)).toLowerCase();
+  let argument = space === -1 ? '' : normalized.slice(space).trim();
+  if (argument.length >= 2 && ((argument.startsWith('"') && argument.endsWith('"')) || (argument.startsWith("'") && argument.endsWith("'")))) {
+    argument = argument.slice(1, -1);
+  }
+  return { name, argument };
 }
 

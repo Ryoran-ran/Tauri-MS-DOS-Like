@@ -1,4 +1,4 @@
-import { Code2, Folder, Gamepad2, Keyboard, PanelLeftClose, Search, Settings2, Terminal, X } from 'lucide-react';
+import { Code2, Folder, Keyboard, LayoutGrid, PanelLeftClose, Search, Settings2, Terminal, X } from 'lucide-react';
 import type { RefObject } from 'react';
 import { commandCategories, commands, searchCommands } from '../../features/commands/registry';
 import type { CommandDefinition } from '../../features/commands/types';
@@ -14,7 +14,7 @@ interface Props {
   searchRef: RefObject<HTMLInputElement | null>;
 }
 
-const categoryIcons = { basic: Terminal, files: Folder, shell: Code2, games: Gamepad2, system: Settings2 };
+const categoryIcons = { basic: Terminal, files: Folder, shell: Code2, programs: LayoutGrid, system: Settings2 };
 
 export function Sidebar({ query, onQueryChange, selected, onSelect, onInsert, onClose, searchRef }: Props) {
   const results = searchCommands(query);

@@ -1,0 +1,22 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.calendar",
+  "code": "CALENDAR",
+  "name": "カレンダー",
+  "description": "予定とToDoの期限を確認",
+  "version": "0.4.0",
+  "category": "tools",
+  "icon": "calendar",
+  "order": 30,
+  "aliases": [
+    "CAL"
+  ],
+  "argument": {
+    "kind": "none"
+  },
+  "entry": {
+    "runtime": "builtin",
+    "module": "calendar"
+  }
+}
