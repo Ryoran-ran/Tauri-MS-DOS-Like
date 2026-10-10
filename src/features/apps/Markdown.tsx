@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AppMessage, AppWindow } from './AppWindow';
 import type { AppProps } from './AppWindow';
@@ -64,24 +64,93 @@ function MarkdownContent({ content }: { content: string }) {
   return <article className="markdown-document" aria-label="Markdown本文">{blocks}</article>;
 }
 
+function MarkdownCreateDialog({ defaultPath, onCreate, onCancel }: {
+  defaultPath: string;
+  onCreate: (path: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [path, setPath] = useState(defaultPath);
+  const [error, setError] = useState('');
+  const [working, setWorking] = useState(false);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
+  const create = async () => {
+    const requested = path.trim();
+    if (!requested) { setError('保存先を入力してください。'); return; }
+    setWorking(true);
+    try { await onCreate(requested); }
+    catch (error: unknown) {
+      setError(error instanceof Error ? error.message : '文書を作成できませんでした。');
+      setWorking(false);
+    }
+  };
+  return <dialog ref={dialogRef} className="app-dialog" aria-labelledby={titleId}
+    onCancel={event => { event.preventDefault(); if (!working) onCancel(); }}
+    onKeyDown={event => event.stopPropagation()}>
+    <form onSubmit={event => { event.preventDefault(); void create(); }}>
+      <h2 id={titleId}>Markdown文書を新規作成</h2>
+      <label className="app-field">保存先
+        <input autoFocus aria-label="新しいMarkdownファイルの保存先" value={path} onChange={event => { setPath(event.target.value); setError(''); }} placeholder="C:\\DOCS\\NOTE.MD" />
+      </label>
+      <AppMessage error={error} />
+      <div className="app-toolbar">
+        <button className="app-button" type="button" disabled={working} onClick={onCancel}>キャンセル</button>
+        <button className="app-button primary" type="submit" disabled={working}>作成して編集</button>
+      </div>
+    </form>
+  </dialog>;
+}
+
 export function Markdown({ active, onClose, fileSystem, initialPath, request, runCommand }: AppProps & { fileSystem: FileSystem; initialPath: string; request: number; runCommand: (command: string) => Promise<void> }) {
   const [path, setPath] = useState(initialPath);
   const [loadedPath, setLoadedPath] = useState(initialPath);
   const [content, setContent] = useState(markdownExample);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [source, setSource] = useState(false);
+  const [creating, setCreating] = useState(false);
   const loadRequest = useRef(0);
   const previousLaunch = useRef<{ request: number; path: string } | null>(null);
   const load = async (requested: string) => {
     const ticket = ++loadRequest.current;
-    if (!requested.trim()) { setContent(markdownExample); setLoadedPath(''); setError(''); return; }
+    if (!requested.trim()) { setContent(markdownExample); setLoadedPath(''); setError(''); setMessage(''); return; }
     try {
       const resolved = fileSystem.resolvePath(requested, 'C:\\');
       const text = await fileSystem.readTextFile(resolved, 'C:\\');
       if (ticket !== loadRequest.current) return;
       if (text.length > 200_000) throw new Error('ビューアは20万文字まで表示できます。');
-      setContent(text); setLoadedPath(resolved); setPath(resolved); setError('');
+      setContent(text); setLoadedPath(resolved); setPath(resolved); setError(''); setMessage('');
     } catch (error: unknown) { if (ticket === loadRequest.current) setError(error instanceof Error ? error.message : '文書を開けませんでした。'); }
+  };
+  const createDocument = async (requested: string) => {
+    let resolved = fileSystem.resolvePath(requested, 'C:\\');
+    if (!/\.[^\\.]+$/.test(resolved)) resolved += '.MD';
+    try {
+      await fileSystem.getInfo(resolved, 'C:\\');
+      throw new Error(`既に存在します: ${resolved}`);
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || !error.message.includes('見つかりません')) throw error;
+    }
+    await fileSystem.writeTextFile(resolved, 'C:\\', '');
+    ++loadRequest.current;
+    setPath(resolved); setLoadedPath(resolved); setContent(''); setError('');
+    setMessage(`作成しました: ${resolved}`); setCreating(false);
+    await runCommand(`VIM "${resolved}"`);
+  };
+  const createDefaultPath = () => {
+    const current = loadedPath || path;
+    if (!current.trim()) return 'C:\\UNTITLED.MD';
+    try {
+      const resolved = fileSystem.resolvePath(current, 'C:\\');
+      const separator = resolved.lastIndexOf('\\');
+      const directory = separator === 2 ? 'C:\\' : resolved.slice(0, separator + 1);
+      return `${directory}UNTITLED.MD`;
+    } catch { return 'C:\\UNTITLED.MD'; }
   };
   useEffect(() => {
     const newLaunch = !previousLaunch.current || previousLaunch.current.request !== request || previousLaunch.current.path !== initialPath;
@@ -89,8 +158,9 @@ export function Markdown({ active, onClose, fileSystem, initialPath, request, ru
     if (newLaunch) { setPath(initialPath); void load(initialPath); }
     else if (active && loadedPath) void load(loadedPath);
   }, [active, initialPath, request, fileSystem]);
-  return <AppWindow id="markdown" active={active} onClose={onClose} footer={loadedPath || 'サンプル文書 · VIM NOTE.MD で文書を作成できます'}>
-    <form className="app-toolbar file-address" onSubmit={event => { event.preventDefault(); void load(path); }}><input aria-label="Markdownファイルのパス" data-primary-input="true" value={path} onChange={event => setPath(event.target.value)} placeholder="C:\DOCS\NOTE.MD" /><button className="app-button primary" type="submit">開く</button><button className="app-button" type="button" aria-pressed={source} onClick={() => setSource(value => !value)}>ソース</button><button className="app-button" type="button" disabled={!loadedPath} onClick={() => { void runCommand(`VIM "${loadedPath}"`); }}>Vimで編集</button></form>
-    <AppMessage error={error} />{source ? <pre className="markdown-source">{content}</pre> : <MarkdownContent content={content} />}
+  return <AppWindow id="markdown" active={active} onClose={onClose} footer={loadedPath || '新規作成、または既存のMarkdown文書を開けます'}>
+    <form className="app-toolbar file-address" onSubmit={event => { event.preventDefault(); void load(path); }}><input aria-label="Markdownファイルのパス" data-primary-input="true" value={path} onChange={event => setPath(event.target.value)} placeholder="C:\DOCS\NOTE.MD" /><button className="app-button primary" type="submit">開く</button><button className="app-button" type="button" onClick={() => setCreating(true)}>新規作成</button><button className="app-button" type="button" aria-pressed={source} onClick={() => setSource(value => !value)}>ソース</button><button className="app-button" type="button" disabled={!loadedPath} onClick={() => { void runCommand(`VIM "${loadedPath}"`); }}>Vimで編集</button></form>
+    <AppMessage error={error} message={message} />{source ? <pre className="markdown-source">{content}</pre> : <MarkdownContent content={content} />}
+    {creating && <MarkdownCreateDialog defaultPath={createDefaultPath()} onCreate={createDocument} onCancel={() => setCreating(false)} />}
   </AppWindow>;
 }

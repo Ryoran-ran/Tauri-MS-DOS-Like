@@ -167,6 +167,29 @@ test('paint supports keyboard drawing, undo, drafts and text files; Markdown saf
   await page.reload(); await run(page, 'PAINT ART.ASC'); await expect(paint.getByRole('grid')).toContainText('UNSAVED DRAFT');
 });
 
+test('Markdown viewer creates a new document without overwriting an existing file', async ({ page }) => {
+  await run(page, 'MARKDOWN');
+  const markdown = page.getByRole('region', { name: 'Markdownビューア', exact: true });
+  await markdown.getByRole('button', { name: '新規作成', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Markdown文書を新規作成' });
+  await expect(dialog.getByLabel('新しいMarkdownファイルの保存先')).toBeFocused();
+  await dialog.getByLabel('新しいMarkdownファイルの保存先').fill('DOCS\\NEW-NOTE');
+  await dialog.getByRole('button', { name: '作成して編集', exact: true }).click();
+
+  const editor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
+  await expect(editor).toBeVisible();
+  await editor.press('i'); await editor.fill('# New Note\n\nCreated in Markdown viewer.');
+  await editor.press('Control+s');
+  await page.getByRole('tab', { name: 'Markdownビューア', exact: true }).click();
+  await expect(markdown.getByRole('heading', { name: 'New Note' })).toBeVisible();
+  await expect(markdown.getByLabel('Markdownファイルのパス')).toHaveValue('C:\\DOCS\\NEW-NOTE.MD');
+
+  await markdown.getByRole('button', { name: '新規作成', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('新しいMarkdownファイルの保存先').fill('C:\\DOCS\\NEW-NOTE.MD');
+  await page.getByRole('dialog').getByRole('button', { name: '作成して編集', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('既に存在します');
+});
+
 test('paint uses themed confirmations for clearing, resizing and reloading, with safe keyboard cancellation', async ({ page }) => {
   const nativeDialogs: string[] = [];
   page.on('dialog', dialog => { nativeDialogs.push(dialog.message()); void dialog.dismiss(); });
