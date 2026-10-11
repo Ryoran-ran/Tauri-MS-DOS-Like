@@ -12,9 +12,9 @@ import helloManifest from '../../../examples/programs/hello/program.json';
 
 const context = (): CommandContext => ({ fileSystem: createFileSystem(), shell: new ShellSession(undefined), currentDirectory: 'C:\\', now: () => new Date() });
 describe('shared program packages and launching', () => {
-  it('loads all fifteen standard packages and gives every command the same aliases', () => {
-    expect(programCatalog).toHaveLength(15);
-    expect(filterPrograms('tools')).toHaveLength(7); expect(filterPrograms('games')).toHaveLength(6); expect(filterPrograms('system')).toHaveLength(2);
+  it('loads all sixteen standard packages and gives every command the same aliases', () => {
+    expect(programCatalog).toHaveLength(16);
+    expect(filterPrograms('tools')).toHaveLength(8); expect(filterPrograms('games')).toHaveLength(6); expect(filterPrograms('system')).toHaveLength(2);
     for (const program of programCatalog) {
       expect(parseProgramManifest(program)).toEqual(program);
       if (program.entry.module !== 'vim') {
@@ -44,7 +44,7 @@ describe('shared program packages and launching', () => {
   });
   it('keeps direct commands and the shared launcher equally strict', async () => {
     const ctx = context();
-    for (const line of ['RUN', 'RUN UNKNOWN', 'RUN 0', 'RUN 16', 'RUN TODO extra', 'RUN GUESS extra', 'RUN FILES one two', 'RUN PAINT DOCS', 'RUN VIM DOCS', 'RUN MARKDOWN MISSING.MD', 'PROGRAMS UNKNOWN']) {
+    for (const line of ['RUN', 'RUN UNKNOWN', 'RUN 0', `RUN ${programCatalog.length + 1}`, 'RUN TODO extra', 'RUN GUESS extra', 'RUN FILES one two', 'RUN PAINT DOCS', 'RUN VIM DOCS', 'RUN MARKDOWN MISSING.MD', 'PROGRAMS UNKNOWN']) {
       const result = await executeCommand(line, ctx); expect(result.error, line).toBe(true); expect(result.activeView, line).toBeUndefined();
     }
     expect((await executeCommand('MD NEWDIR', ctx)).activeView).toBeUndefined();

@@ -16,12 +16,7 @@ export function DriveImport({ active, onImport, onExit }: Props) {
   useEffect(() => {
     if (!active) return;
     requestAnimationFrame(() => inputRef.current?.focus());
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) { event.preventDefault(); onExit(); }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [active, busy, onExit]);
+  }, [active]);
 
   const selectFile = async (file?: File) => {
     setError('');
@@ -42,7 +37,7 @@ export function DriveImport({ active, onImport, onExit }: Props) {
   };
 
   return (
-    <section className="import-view" aria-label="仮想ドライブ取り込み" hidden={!active}>
+    <section className="import-view" aria-label="仮想ドライブ取り込み" hidden={!active} data-block-workspace-close={busy || undefined}>
       <div className="import-window">
         <header className="import-titlebar">RETRODOS DRIVE IMPORT</header>
         <div className="import-body">
@@ -62,7 +57,7 @@ export function DriveImport({ active, onImport, onExit }: Props) {
           <p className="import-warning">現在の仮想ドライブは選択した内容に置き換わります。取り込み後もUNDOで元に戻せます。</p>
           {error && <div className="import-error" role="alert">{error}</div>}
           <div className="import-actions">
-            <button className="button secondary" type="button" onClick={onExit} disabled={busy}>キャンセル <kbd>Esc</kbd></button>
+            <button className="button secondary" type="button" onClick={onExit} disabled={busy}>キャンセル <kbd>Ctrl+W</kbd></button>
             <button className="button primary" type="button" onClick={() => { void executeImport(); }} disabled={!data || busy}>{busy ? '取込中...' : 'インポート実行'}</button>
           </div>
         </div>

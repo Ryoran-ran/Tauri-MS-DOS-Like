@@ -11,6 +11,7 @@ import { AsciiPaint } from './AsciiPaint';
 import { Markdown } from './Markdown';
 import { SystemInfo } from './SystemInfo';
 import { Settings } from './Settings';
+import { DosGameManager } from '../dosbox/DosGameManager';
 
 interface Props {
   activeView: ActiveView; openViews: ActiveView[]; closeView: (id: BuiltinAppId) => void;
@@ -23,6 +24,7 @@ export function BuiltinApps(props: Props) {
   const { openViews, activeView, closeView, fileSystem, appLaunches, fileRevision, runCommand, settings, setSettings, storageError } = props;
   const common = (id: BuiltinAppId) => ({ active: activeView === id, onClose: () => closeView(id) });
   return <>
+    {openViews.includes('dosbox') && <DosGameManager {...common('dosbox')} />}
     {openViews.includes('files') && <FileManager {...common('files')} fileSystem={fileSystem} initialPath={appLaunches.files?.path ?? 'C:\\'} request={appLaunches.files?.request ?? 0} revision={fileRevision} runCommand={runCommand} />}
     {openViews.includes('todo') && <Todo {...common('todo')} />}
     {openViews.includes('calendar') && <Calendar {...common('calendar')} weekStart={settings.weekStart} />}

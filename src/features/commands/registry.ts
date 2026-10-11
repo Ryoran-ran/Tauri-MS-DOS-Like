@@ -1,5 +1,6 @@
 import { APP_VERSION } from '../../app/constants';
 import { appCommands } from './appCommands';
+import { desktopCommands } from './desktopCommands';
 import { gameCommands } from './gameCommands';
 import { programCommands } from './programCommands';
 import { findProgram } from '../programs/catalog';
@@ -310,6 +311,7 @@ export const commands: readonly CommandDefinition[] = [
     execute: (_, context) => output(`現在の時刻 (JST): ${context.now().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })}`),
   },
   ...appCommands,
+  ...desktopCommands,
   ...gameCommands,
 ];
 

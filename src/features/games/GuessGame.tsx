@@ -52,7 +52,7 @@ export function GuessGame({ active, onExit }: GameProps) {
         {won ? <div className="game-finish-actions"><button className="button primary" onClick={reset} autoFocus><RotateCcw size={15} />もう一度遊ぶ</button><button className="button secondary" onClick={onExit}>ゲームを終了</button></div> : <form className="guess-form" onSubmit={event => { event.preventDefault(); submit(); }} noValidate><input ref={inputRef} data-primary-input="true" type="number" inputMode="numeric" min="1" max="100" step="1" aria-label="予想する数字" aria-invalid={Boolean(error)} aria-describedby={error ? 'guess-error' : undefined} value={guess} onChange={event => setGuess(event.target.value)} placeholder="1〜100" /><button className="button primary" type="submit">予想する<CornerDownLeft size={15} /></button></form>}
         {error && <p id="guess-error" className="form-error" role="alert">{error}</p>}
         {attempts.length > 0 && <div className="attempts" aria-label="予想履歴">{attempts.map((attempt, index) => <span key={index} className={attempt.result === 'correct' ? 'correct' : ''}>{attempt.value}{attempt.result === 'higher' ? <ArrowUp size={12} /> : attempt.result === 'lower' ? <ArrowDown size={12} /> : <Trophy size={12} />}</span>)}</div>}
-        <p className="game-footer-note"><kbd>Space</kbd> 入力欄 ・ <kbd>Esc</kbd> ゲーム終了 ・ 回数制限なし</p>
+        <p className="game-footer-note"><kbd>Space</kbd> 入力欄 ・ <kbd>Ctrl+W</kbd> ゲーム終了 ・ 回数制限なし</p>
       </div>
     </section>
   );

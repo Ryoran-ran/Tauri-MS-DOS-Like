@@ -8,6 +8,7 @@ import { getProgramIcon } from '../../features/programs/icons';
 import { programCategories } from '../../features/programs/types';
 import { findInstalledGamePlugin } from '../../features/games/gamePlugin';
 import { useGamePlugins } from '../../features/games/useGamePlugins';
+import { useDosGames } from '../../features/dosbox/useDosGames';
 
 interface Props {
   activeView: ActiveView;
@@ -24,6 +25,7 @@ export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath
   const gamePlugins = useGamePlugins();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const dosGames = useDosGames(launcherOpen);
   const launcherRef = useRef<HTMLDivElement>(null);
   const launcherButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -95,6 +97,7 @@ export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath
           <p className="program-menu-category">{category.label}</p>
           {filterPrograms(category.id).map(program => { const Icon = getProgramIcon(program.icon); return <button key={program.id} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`RUN ${program.code}`); }}><Icon size={16} /><span>{program.name}<small>{program.description}</small></span><code>{program.code}</code></button>; })}
           {category.id === 'games' && gamePlugins.map(plugin => <button key={`plugin-${plugin.id}`} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`RUN ${plugin.code}`); }}><Gamepad2 size={16} /><span>{plugin.name}<small>{plugin.description}</small></span><code>{plugin.code}</code></button>)}
+          {category.id === 'games' && dosGames.map(game => <button key={`dos-${game.id}`} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`DOSRUN ${game.config.code}`); }}><Gamepad2 size={16} /><span>{game.config.name}<small>DOSゲーム / DOSBox</small></span><code>{game.config.code}</code></button>)}
         </div>)}
         <button role="menuitem" className="program-menu-library" onClick={() => { setLauncherOpen(false); onLaunchCommand('PROGRAMS'); }}><Library size={16} /><span>プログラム一覧<small>コード・番号・矢印で選択</small></span></button>
       </div>}

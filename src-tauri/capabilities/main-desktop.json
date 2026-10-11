@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-desktop",
+  "description": "DOS game manager and fullscreen controls for the bundled main window",
+  "windows": ["main"],
+  "permissions": ["allow-dosbox-request", "core:window:allow-is-fullscreen", "core:window:allow-set-fullscreen"]
+}

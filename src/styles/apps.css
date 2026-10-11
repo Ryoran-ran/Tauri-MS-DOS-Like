@@ -1,4 +1,19 @@
 /* Built-in programs share a DOS palette and window controls. */
+.dos-controls { min-width: 0; border: 0; padding: 0; margin: 0; }
+.dos-path { flex: 1; min-width: min(280px, 100%); }
+.dos-manager-grid { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr); gap: 16px; margin-top: 16px; }
+.dos-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.dos-game-list, .dos-backup-list { list-style: none; padding: 0; margin-top: 14px; }
+.dos-game-list .app-button { width: 100%; white-space: normal; justify-content: flex-start; text-align: left; margin-bottom: 7px; }
+.dos-game-list small, .dos-backup-list small { display: block; font-size: 10px; }
+.dos-backup-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 0; border-top: 1px solid var(--program-line); }
+.dos-backup-list li > span { flex: 1; min-width: 160px; }
+.dos-location { overflow-wrap: anywhere; }
+.app-dosbox hr { border: 0; border-top: 1px solid var(--program-line); margin: 16px 0; }
+.display-error { position: fixed; top: 45px; right: 10px; z-index: 1100; max-width: calc(100vw - 20px); padding: 10px; color: #fff; background: #a00; }
+.display-error button { margin-left: 12px; text-decoration: underline; }
+@media (max-width: 900px) { .dos-manager-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 500px) { .dos-form-grid { grid-template-columns: minmax(0, 1fr); } }
 .app-shell { grid-template-columns: minmax(0, 1fr); --program-bg: #0000aa; --program-surface: #c0c0c0; --program-text: #000; --program-accent: #000080; --program-highlight: #55ffff; --program-line: #777; }
 .app-body { min-width: 0; }
 .workspace-tab-strip { display: flex; flex-shrink: 0; min-width: 0; height: 38px; position: relative; background: #00aaaa; border-bottom: 2px solid #55ffff; z-index: 3; }

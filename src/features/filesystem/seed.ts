@@ -22,7 +22,7 @@ const exampleWebGamePlugin = JSON.stringify({
   achievements: [{ id: 'first-star', name: 'FIRST STAR', description: '最初の星を取得した' }],
 }, null, 2);
 
-const commandGuide = `RetroDOS v0.5 コマンドガイド
+const commandGuide = `RetroDOS v1.0 コマンドガイド
 
 HELP          コマンド一覧
 HELP CD       コマンドの詳細
@@ -53,6 +53,10 @@ CD DOCS && DIR    複数コマンド
 ECHO hello > NOTE.TXT  リダイレクト
 DIR | FIND ".TXT"    パイプ
 PROGRAMS      プログラム一覧
+DOSBOX        DOSゲーム登録・設定・セーブ管理（Windows版）
+DOSRUN DOS_MYGAME  登録したDOSゲームを起動
+DOSBACKUP DOS_MYGAME  ゲーム全体をバックアップ
+FULLSCREEN    全画面切替（F11でも切替、Escで解除）
 APPS          PROGRAMSの別名
 FILES         ファイルマネージャー
 TODO          ToDoリスト
@@ -72,8 +76,8 @@ ROGUE         ローグライク
 GAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON  ゲーム追加
 GAMEPROMPT    ゲーム作成をAIに相談
 
-↑ / ↓: 履歴   Tab: 補完   Esc: 候補を閉じる
-Ctrl+K: コマンド検索   Ctrl+L: ターミナルをクリア`;
+↑ / ↓: 履歴   Tab: 補完   Esc: 候補を閉じる・全画面解除
+Ctrl+W: アプリを閉じる   Ctrl+K: コマンド検索   Ctrl+L: ターミナルをクリア`;
 
 export const initialFileSystem: DirectoryNode = {
   kind: 'directory', name: 'C:', children: [
@@ -90,7 +94,7 @@ export const initialFileSystem: DirectoryNode = {
       { kind: 'file', name: 'DEMO.BAT', content: '@ECHO OFF\nREM RetroDOS v0.3 shell demo\nSET PROJECT=RETRODOS\nECHO %PROJECT% shell is ready > C:\\SHELL-DEMO.TXT\nTYPE C:\\SHELL-DEMO.TXT' },
     ] },
     { kind: 'directory', name: 'SYSTEM', children: [
-      { kind: 'file', name: 'VERSION.TXT', content: 'RetroDOS Version 0.5.0\n仮想ファイルシステム / 永続ストレージ\nBAT / パイプ / リダイレクト / 環境変数\n6本の内蔵ゲーム / スコア・実績 / v1・v2ゲームプラグイン\n外部DOSゲームとDOSBox連携は将来のバージョンで対応予定です。' },
+      { kind: 'file', name: 'VERSION.TXT', content: 'RetroDOS Version 1.0.0\n仮想ファイルシステム / 永続ストレージ\nBAT / パイプ / リダイレクト / 環境変数\n6本の内蔵ゲーム / スコア・実績 / v1・v2ゲームプラグイン\nDOSBox連携 / 所有ゲームの登録・起動設定・セーブ管理（Windows版）\n全画面 / CRT表示 / 起動音' },
     ] },
     { kind: 'file', name: 'README.TXT', content: 'Welcome to RetroDOS.\n\nレトロなコマンド操作 × 現代的なデスクトップUI\n\nHELP でコマンド一覧を表示します。\nCALL SCRIPTS\\DEMO.BAT でv0.3のシェル機能を試せます。\nPROGRAMS でプログラム一覧を開きます。\nGAMES でゲームだけを表示します。\nGUESS / SNAKE / MINES / BLOCKS / ADVENTURE / ROGUE を利用できます。\nGAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON で分岐型サンプルを追加できます。\nGAMEIMPORT C:\\GAMES\\PIXEL.RGAME.JSON でWebゲーム形式を試せます。\nGAMEPROMPT で作りたいゲームをAIと相談できます。\n\nここにあるファイルはすべて仮想ファイルです。\n実際のPCのファイルやOSコマンドは操作しません。' },
   ],

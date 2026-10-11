@@ -1,7 +1,7 @@
 import { programCatalog } from '../features/programs/catalog';
 import type { BuiltinGameId, BuiltinModule } from '../features/programs/types';
 import type { ActiveView } from '../types/workspace';
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '1.0.0';
 export const VIEW_LABELS: Record<ActiveView, string> = {
   terminal: 'ターミナル',
   pager: 'MORE',

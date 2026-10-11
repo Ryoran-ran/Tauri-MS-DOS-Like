@@ -30,7 +30,7 @@ test('five v0.5 games launch from commands and support keyboard play', async ({ 
   const snake = page.getByRole('region', { name: 'SNAKEゲーム' });
   await expect(snake).toBeVisible(); await expect(page.getByLabel('SNAKE盤面')).toBeFocused();
   await page.keyboard.press('ArrowDown'); await expect(snake.locator('.snake-head')).toHaveCount(1);
-  await page.getByLabel('SNAKE盤面').press('Escape');
+  await page.getByLabel('SNAKE盤面').press('Control+w');
 
   await run(page, 'MINES');
   const mines = page.getByRole('region', { name: 'MINESゲーム' });
@@ -38,14 +38,14 @@ test('five v0.5 games launch from commands and support keyboard play', async ({ 
   await page.keyboard.press('Enter'); await expect(mines.locator('.mine-board .revealed').first()).toBeVisible();
   await mines.locator('.mine-board button:not(.revealed)').first().focus(); await page.keyboard.press('f');
   await expect(mines.getByRole('gridcell', { name: /旗/ })).toHaveCount(1);
-  await page.getByRole('grid', { name: '地雷原' }).press('Escape');
+  await page.getByRole('grid', { name: '地雷原' }).press('Control+w');
 
   await run(page, 'TETRIS');
   const blocks = page.getByRole('region', { name: 'BLOCKSゲーム' });
   await expect(page.getByLabel('落ちものパズル盤面')).toBeFocused();
   await page.keyboard.press('ArrowUp'); await page.keyboard.press('Space');
   await expect(blocks.locator('.blocks-board .block').first()).toBeVisible();
-  await page.getByLabel('落ちものパズル盤面').press('Escape');
+  await page.getByLabel('落ちものパズル盤面').press('Control+w');
 
   await run(page, 'ADV');
   const adventure = page.getByRole('region', { name: 'LOST TERMINAL テキストアドベンチャー' });
@@ -53,13 +53,13 @@ test('five v0.5 games launch from commands and support keyboard play', async ({ 
   await page.keyboard.press('1'); await expect(adventure).toContainText('ACCESS CARD');
   await page.keyboard.press('1'); await expect(adventure).toContainText('MISSION COMPLETE');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').scores?.adventure?.wins ?? 0)).toBe(1);
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+w');
 
   await run(page, 'DUNGEON');
   const rogue = page.getByRole('region', { name: 'ROGUEゲーム' });
   await expect(page.getByLabel('ASCII地下迷宮')).toBeFocused();
   await page.keyboard.press('ArrowRight'); await expect(rogue.locator('.rogue-hud')).toContainText('TURN 1');
-  await page.getByLabel('ASCII地下迷宮').press('Escape');
+  await page.getByLabel('ASCII地下迷宮').press('Control+w');
 
   await run(page, 'GAMES');
   const library = page.getByRole('region', { name: 'プログラム一覧画面' });
@@ -110,6 +110,6 @@ test('web game plugin imports into a sandbox and reports score and achievements'
   await game.getByRole('button', { name: 'もう一度' }).click();
   await expect(page.locator('iframe[title="PIXEL CATCH ゲーム画面"]')).not.toHaveAttribute('src', oldFrameUrl!);
   await expect(frame.getByText('ARROW KEYS: MOVE @ TO *')).toBeVisible();
-  await board.press('Escape');
+  await board.press('Control+w');
   await expect(page.getByRole('region', { name: 'ターミナル' })).toBeVisible();
 });

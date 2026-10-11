@@ -57,7 +57,7 @@ export function SnakeGame({ active, onExit }: GameProps) {
         {(game.over || game.won) && <div className="board-overlay"><strong>{game.won ? 'ALL CLEAR' : 'GAME OVER'}</strong><span>R でもう一度</span></div>}
       </div>
       <div className="arcade-actions"><button className="button primary" onClick={() => setRunning(value => !value)} disabled={game.over || game.won}>{running ? <Pause size={14} /> : <Play size={14} />}{running ? '一時停止' : '開始'}</button><button className="button secondary" onClick={reset}><RotateCcw size={14} />リセット</button></div>
-      <p className="game-footer-note"><kbd>↑↓←→</kbd> / WASD 移動 ・ <kbd>Space</kbd> 一時停止 ・ <kbd>R</kbd> リセット ・ <kbd>Esc</kbd> 終了</p>
+      <p className="game-footer-note"><kbd>↑↓←→</kbd> / WASD 移動 ・ <kbd>Space</kbd> 一時停止 ・ <kbd>R</kbd> リセット ・ <kbd>Ctrl+W</kbd> 終了</p>
     </div>
   </section>;
 }

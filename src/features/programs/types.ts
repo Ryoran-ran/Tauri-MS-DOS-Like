@@ -6,7 +6,7 @@ export const programCategories = [
 export type ProgramCategory = typeof programCategories[number]['id'];
 export type ProgramFilter = 'all' | ProgramCategory;
 export type BuiltinGameId = 'guess' | 'snake' | 'mines' | 'blocks' | 'adventure' | 'rogue';
-export type BuiltinModule = 'files' | 'todo' | 'calendar' | 'calculator' | 'paint' | 'markdown' | 'vim' | BuiltinGameId | 'sysinfo' | 'settings';
+export type BuiltinModule = 'files' | 'todo' | 'calendar' | 'calculator' | 'paint' | 'markdown' | 'vim' | 'dosbox' | BuiltinGameId | 'sysinfo' | 'settings';
 export type BuiltinAppId = Exclude<BuiltinModule, 'vim' | BuiltinGameId>;
 export type ProgramArgumentKind = 'none' | 'directory' | 'document' | 'drawing' | 'markdown' | 'expression';
 export interface ProgramManifest {

@@ -13,7 +13,7 @@ test('boot, filesystem, errors, safe text and CLS', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   const log = page.getByRole('log');
-  await expect(log).toContainText('RetroDOS Version 0.5.0');
+  await expect(log).toContainText('RetroDOS Version 1.0.0');
   await commandInput(page).evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(commandInput(page)).toBeFocused();
@@ -92,7 +92,7 @@ test('command guide uses collapsible categories and runs commands without argume
   const details = page.getByRole('region', { name: 'VERの詳細' });
   await expect(search).toBeHidden();
   await details.getByRole('button', { name: '実行する' }).click();
-  await expect(page.getByRole('log')).toContainText('RetroDOS Version 0.5.0');
+  await expect(page.getByRole('log')).toContainText('RetroDOS Version 1.0.0');
   await expect(search).toBeVisible();
 });
 
@@ -133,9 +133,9 @@ test('file commands support discovery, paging, wildcard undo and drive transfer'
   await run(page, 'MORE DOCS\\COMMANDS.TXT');
   const pager = page.getByRole('region', { name: 'MOREページャー' });
   await expect(pager).toBeVisible();
-  await expect(pager).toContainText('RetroDOS v0.5 コマンドガイド');
+  await expect(pager).toContainText('RetroDOS v1.0 コマンドガイド');
   await page.keyboard.press('End');
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+w');
   await expect(commandInput(page)).toBeFocused();
 
   await run(page, 'COPY README.TXT TEMP-A.TXT');
@@ -409,8 +409,8 @@ test('library, GUESS validation, win, replay and exit', async ({ page }) => {
   await game.getByRole('button', { name: 'もう一度遊ぶ' }).click();
   await expect(number).toBeVisible();
   await expect(game.locator('.attempts')).toHaveCount(0);
-  await expect(game.locator('.game-footer-note kbd').filter({ hasText: 'Esc' })).toHaveText('Esc');
-  await number.press('Escape');
+  await expect(game.locator('.game-footer-note kbd').filter({ hasText: 'Ctrl+W' })).toHaveText('Ctrl+W');
+  await number.press('Control+w');
   await expect(commandInput(page)).toBeFocused();
   await expect(page.locator('.execution-status')).toHaveText('READY');
   await run(page, 'RUN GUESS');
@@ -435,23 +435,23 @@ test('game library supports code, number and arrow-only keyboard selection', asy
   await selector.fill('guess');
   await selector.press('Enter');
   await expect(game).toBeVisible();
-  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Escape');
+  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Control+w');
 
   await run(page, 'GAMES');
   await selector.fill('1');
   await selector.press('Enter');
   await expect(game).toBeVisible();
-  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Escape');
+  await page.getByRole('spinbutton', { name: '予想する数字' }).press('Control+w');
 
   await run(page, 'GAMES');
   await selector.press('ArrowDown');
   await expect(page.locator('.game-card.selected')).toContainText('SNAKE');
   await selector.press('Enter');
   await expect(page.getByRole('region', { name: 'SNAKEゲーム' })).toBeVisible();
-  await page.getByLabel('SNAKE盤面').press('Escape');
+  await page.getByLabel('SNAKE盤面').press('Control+w');
 
   await run(page, 'GAMES');
-  await selector.press('Escape');
+  await selector.press('Control+w');
   await expect(commandInput(page)).toBeFocused();
 });
 
@@ -486,7 +486,7 @@ test('resizing and sidebar toggles keep input and status visible', async ({ page
   await page.locator('.sidebar-toggle').click();
   await expect(page.getByRole('textbox', { name: 'コマンドを検索' })).toBeVisible();
   await page.getByRole('textbox', { name: 'コマンドを検索' }).fill('run');
-  await page.locator('.command-item').click();
+  await page.getByRole('button', { name: 'RUN プログラムを起動', exact: true }).click();
   await page.getByRole('button', { name: '入力欄に挿入' }).click();
   await expect(page.locator('.sidebar')).toHaveCount(0);
   await expect(commandInput(page)).toHaveValue('RUN GUESS');

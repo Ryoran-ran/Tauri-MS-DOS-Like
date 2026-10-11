@@ -42,7 +42,7 @@ export function PluginAdventure({ active, onExit, manifest, external = false }: 
     <div className="story-window"><header><div><span className="eyebrow">{manifest.author} / {manifest.version}</span><h1>{manifest.name}</h1></div><GameStats gameId={profileId} score={score} /></header>
       <div className="story-screen"><div className="story-history" aria-label="行動履歴">{history.map((line, index) => <span key={index}>{line}</span>)}</div><h2>{scene.title}</h2><p>{scene.text}</p>{inventory.length > 0 && <p className="story-inventory">ITEM: {inventory.join(' / ')}</p>}</div>
       {scene.ending ? <div className={`story-ending ${scene.ending}`} role="status"><strong>{scene.ending === 'win' ? 'MISSION COMPLETE' : 'GAME OVER'}</strong><button ref={firstButton} data-primary-input="true" className="button primary" onClick={reset}><RotateCcw size={14} />最初から</button></div> : <div className="story-choices">{scene.choices.map((choice, index) => { const locked = Boolean(choice.requires && !inventory.includes(choice.requires)); return <button ref={index === 0 ? firstButton : undefined} data-primary-input={index === 0 ? 'true' : undefined} key={`${choice.to}-${index}`} disabled={locked} onClick={() => choose(choice)}><kbd>{index + 1}</kbd><span>{choice.label}{locked && <small>必要: {choice.requires}</small>}</span></button>; })}</div>}
-      <footer>{manifest.description}<span><kbd>1-9</kbd> 選択 ・ <kbd>Esc</kbd> 終了</span></footer>
+      <footer>{manifest.description}<span><kbd>1-9</kbd> 選択 ・ <kbd>Ctrl+W</kbd> 終了</span></footer>
     </div>
   </section>;
 }

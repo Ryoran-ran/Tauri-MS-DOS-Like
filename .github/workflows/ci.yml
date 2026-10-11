@@ -90,3 +90,6 @@ jobs:
 
       - name: Build Windows desktop application
         run: npm run desktop:build
+
+      - name: Test native game storage and launch validation
+        run: cargo test --release --manifest-path src-tauri/Cargo.toml --lib

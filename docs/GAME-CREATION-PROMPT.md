@@ -74,7 +74,7 @@ v2 Webゲームの必須仕様：
 - HTMLにscript、style、iframe、object、embed、link、外部URLを含めない
 - CSSはsource.css、処理はsource.javascriptだけに入れる
 - DOM生成ではinnerHTMLよりtextContentを優先する
-- EscapeキーはRetroDOSへ戻る操作のため、ゲーム操作に割り当てない
+- Ctrl+WはRetroDOSへ戻る操作、Escapeは全画面解除に使うため、ゲーム操作に割り当てない
 - キーボードだけでも開始、プレイ、再開できるようにする。マウス対応は追加してよい
 - 無限ループや長時間ブロックする同期処理を作らない
 

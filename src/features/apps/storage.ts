@@ -22,8 +22,10 @@ export interface AppSettings {
   fontSize: number;
   weekStart: 0 | 1;
   followOutput: boolean;
+  startupSound: boolean;
+  soundVolume: number;
 }
-export const defaultSettings: AppSettings = { theme: 'dos', crt: 'off', fontSize: 13, weekStart: 0, followOutput: true };
+export const defaultSettings: AppSettings = { theme: 'dos', crt: 'off', fontSize: 13, weekStart: 0, followOutput: true, startupSound: false, soundVolume: 25 };
 export function decodeSettings(value: unknown): AppSettings {
   if (!value || typeof value !== 'object') return defaultSettings;
   const data = value as Partial<AppSettings>;
@@ -33,5 +35,7 @@ export function decodeSettings(value: unknown): AppSettings {
     fontSize: typeof data.fontSize === 'number' && data.fontSize >= 11 && data.fontSize <= 20 ? data.fontSize : 13,
     weekStart: data.weekStart === 1 ? 1 : 0,
     followOutput: data.followOutput !== false,
+    startupSound: data.startupSound === true,
+    soundVolume: typeof data.soundVolume === 'number' && Number.isFinite(data.soundVolume) ? Math.max(0, Math.min(100, data.soundVolume)) : 25,
   };
 }

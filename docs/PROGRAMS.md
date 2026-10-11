@@ -4,7 +4,7 @@
 
 ## 現在実装している範囲
 
-- 標準15プログラムを`src/features/programs/builtin/<module>/program.json`から登録。
+- 標準16プログラムを`src/features/programs/builtin/<module>/program.json`から登録。`DOSBOX`はDOSゲームを管理する標準ツールです。
 - 起動メニュー、分類、番号選択、コード選択、RUN、別名、ウィンドウ名は共通カタログを使用。
 - `PROGRAMS`（別名`APPS`）は全件、`GAMES`はゲームに絞った同じ一覧を開く。
 - `RUN CALC "(12 + 8) * 3"`、`RUN VIM NOTE.TXT`、`RUN GUESS`など、共通の起動処理から実行。

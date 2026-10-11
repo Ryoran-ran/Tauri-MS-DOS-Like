@@ -37,7 +37,7 @@ export function MoreViewer({ active, path, content, onExit }: Props) {
   useEffect(() => {
     if (!active) return;
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'q' || event.key === 'Escape') {
+      if (event.key.toLowerCase() === 'q') {
         event.preventDefault();
         onExit();
       } else if (event.code === 'Space' || event.key === 'PageDown') {
@@ -72,7 +72,7 @@ export function MoreViewer({ active, path, content, onExit }: Props) {
       </div>
       <footer className="more-statusbar">
         <strong>-- More -- {percentage}%</strong>
-        <span><kbd>Space</kbd> 次頁 <kbd>Enter</kbd> 1行 <kbd>B</kbd> 前頁 <kbd>Q</kbd>/<kbd>Esc</kbd> 終了</span>
+        <span><kbd>Space</kbd> 次頁 <kbd>Enter</kbd> 1行 <kbd>B</kbd> 前頁 <kbd>Q</kbd>/<kbd>Ctrl+W</kbd> 終了</span>
       </footer>
     </section>
   );
