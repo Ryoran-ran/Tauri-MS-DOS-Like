@@ -110,7 +110,7 @@ export function App() {
   }, [activeView, runCommand, switchTab, toggleSidebar]);
 
   return (
-    <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`} data-theme={settings.theme} style={{ '--app-font-size': `${settings.fontSize}px` } as CSSProperties}>
+    <div className={`app-shell ${sidebarOpen ? 'sidebar-is-open' : ''}`} data-theme={settings.theme} data-crt={settings.crt} style={{ '--app-font-size': `${settings.fontSize}px` } as CSSProperties}>
       <TitleBar activeView={activeView} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <div className="app-body">
         {sidebarOpen && <><button className="sidebar-backdrop" aria-label="サイドバーを閉じる" onClick={closeSidebar} tabIndex={-1} /><Sidebar query={commandSearchQuery} onQueryChange={setCommandSearchQuery} selected={selectedCommand} onSelect={setSelectedCommand} onInsert={insert} onExecute={executeFromGuide} onClose={closeSidebar} searchRef={searchRef} /></>}
@@ -126,6 +126,7 @@ export function App() {
         </main></GameProfileProvider>
       </div>
       <StatusBar directory={workspace.currentDirectory} status={workspace.status} />
+      {settings.crt !== 'off' && <div className="crt-overlay" aria-hidden="true" />}
     </div>
   );
 }

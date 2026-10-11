@@ -259,31 +259,58 @@ test('paint uses themed confirmations for clearing, resizing and reloading, with
   expect(nativeDialogs).toEqual([]);
 });
 
-test('settings persist and change colors, font, calendar and scrolling; system info reflects the drive', async ({ page }) => {
+test('settings persist and change colors, CRT, font, calendar and scrolling; system info reflects the drive', async ({ page }) => {
   await run(page, 'SETTINGS');
   const settings = page.getByRole('region', { name: '設定', exact: true });
   await settings.getByLabel('配色', { exact: true }).selectOption('amber');
   await settings.getByLabel('文字サイズ', { exact: true }).selectOption('16');
+  await settings.getByLabel('ブラウン管風の表示', { exact: true }).selectOption('soft');
   await settings.getByLabel('カレンダーの週始まり').selectOption('1');
   await settings.getByRole('checkbox').uncheck();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'amber');
   await run(page, 'CALENDAR'); await expect(page.locator('.calendar-weekday').first()).toHaveText('月');
   await page.reload(); await run(page, 'SETTINGS');
   await expect(settings.getByLabel('配色', { exact: true })).toHaveValue('amber');
+  await expect(settings.getByLabel('ブラウン管風の表示', { exact: true })).toHaveValue('soft');
   await expect(settings.getByRole('checkbox')).not.toBeChecked();
   await run(page, 'HELP');
   await expect(page.getByRole('log')).toHaveCSS('font-size', '16px');
   await expect(page.getByRole('button', { name: '新しい出力', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '新しい出力', exact: true }).click();
   await expect.poll(() => page.getByRole('log').evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+  await page.screenshot({ path: 'test-results/crt-amber-soft.png' });
   await run(page, 'ECHO information-test > INFO.TXT'); await run(page, 'SYSINFO');
   const system = page.getByRole('region', { name: 'システム情報', exact: true });
   await expect(system).toContainText('Version 0.5.0');
   await expect(system.locator('.system-metrics').first()).toContainText('bytes');
   await expect(system).toContainText('47');
   await page.getByRole('tab', { name: '設定', exact: true }).click();
+  await settings.getByLabel('ブラウン管風の表示', { exact: true }).selectOption('strong');
+  await settings.getByLabel('配色', { exact: true }).selectOption('dos');
+  await settings.getByLabel('文字サイズ', { exact: true }).selectOption('13');
+  await run(page, 'CLS');
+  await run(page, 'VER');
+  await run(page, 'ECHO ブラウン管の表示を確認しています。');
+  await page.screenshot({ path: 'test-results/crt-dos-strong.png' });
+  await page.getByRole('tab', { name: '設定', exact: true }).click();
+  await settings.getByLabel('配色', { exact: true }).selectOption('green');
+  await settings.getByLabel('文字サイズ', { exact: true }).selectOption('16');
+  await page.screenshot({ path: 'test-results/crt-settings-green.png' });
+  await run(page, 'HELP');
+  await input(page).pressSequentially('ECHO CRT keyboard check');
+  await input(page).press('Enter');
+  await expect(page.getByRole('log')).toContainText('CRT keyboard check');
+  await page.screenshot({ path: 'test-results/crt-green-strong.png' });
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.locator('.sidebar-toggle').click();
+  await expect(input(page)).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+  await page.screenshot({ path: 'test-results/crt-mobile.png' });
+  await page.setViewportSize({ width: 1180, height: 780 });
+  await page.getByRole('tab', { name: '設定', exact: true }).click();
   await settings.getByRole('button', { name: '設定を初期値に戻す' }).click();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dos');
+  await expect(settings.getByLabel('ブラウン管風の表示', { exact: true })).toHaveValue('off');
 });
 
 test('app windows and launcher remain usable on a narrow screen', async ({ page }) => {

@@ -18,16 +18,18 @@ export function useStoredState<T>(key: string, initial: T, decode: (value: unkno
 
 export interface AppSettings {
   theme: 'dos' | 'amber' | 'green';
+  crt: 'off' | 'soft' | 'strong';
   fontSize: number;
   weekStart: 0 | 1;
   followOutput: boolean;
 }
-export const defaultSettings: AppSettings = { theme: 'dos', fontSize: 13, weekStart: 0, followOutput: true };
+export const defaultSettings: AppSettings = { theme: 'dos', crt: 'off', fontSize: 13, weekStart: 0, followOutput: true };
 export function decodeSettings(value: unknown): AppSettings {
   if (!value || typeof value !== 'object') return defaultSettings;
   const data = value as Partial<AppSettings>;
   return {
     theme: data.theme === 'amber' || data.theme === 'green' ? data.theme : 'dos',
+    crt: data.crt === 'soft' || data.crt === 'strong' ? data.crt : 'off',
     fontSize: typeof data.fontSize === 'number' && data.fontSize >= 11 && data.fontSize <= 20 ? data.fontSize : 13,
     weekStart: data.weekStart === 1 ? 1 : 0,
     followOutput: data.followOutput !== false,

@@ -10,6 +10,8 @@ export function Settings({ active, onClose, settings, setSettings, storageError 
     <div className="settings-grid"><section className="app-card"><h2>画面</h2>
       <label className="app-field">配色<select aria-label="配色" data-primary-input="true" value={settings.theme} onChange={event => update('theme', event.target.value as AppSettings['theme'])}><option value="dos">DOS ブルー</option><option value="amber">アンバー</option><option value="green">グリーン</option></select></label>
       <label className="app-field">文字サイズ<select aria-label="文字サイズ" value={settings.fontSize} onChange={event => update('fontSize', Number(event.target.value))}>{[11, 12, 13, 14, 16, 18, 20].map(size => <option key={size} value={size}>{size} px</option>)}</select></label>
+      <label className="app-field">ブラウン管風の表示<select aria-label="ブラウン管風の表示" value={settings.crt} onChange={event => update('crt', event.target.value as AppSettings['crt'])}><option value="off">オフ</option><option value="soft">弱め</option><option value="strong">強め</option></select></label>
+      <p className="app-muted">走査線、文字のにじみ、画面の縁の陰影を加えます。強めでは黒背景に光の線と粒子感も加わります。</p>
       <p className="settings-preview">C:\&gt; ECHO Hello, RetroDOS!</p>
     </section><section className="app-card"><h2>操作</h2>
       <label className="app-field">カレンダーの週始まり<select aria-label="カレンダーの週始まり" value={settings.weekStart} onChange={event => update('weekStart', Number(event.target.value) as 0 | 1)}><option value={0}>日曜日</option><option value={1}>月曜日</option></select></label>
