@@ -6,6 +6,12 @@ React + TypeScriptによるブラウザー版と、Tauri v2によるWindowsデ�
 
 ![RetroDOS v1.0のターミナル](docs/screenshots/desktop.png)
 
+## インストール（Windows x64）
+
+[GitHub Releasesの最新版](https://github.com/Ryoran-ran/Tauri-MS-DOS-Like/releases/latest)を開き、Assetsから`RetroDOS_*_x64-setup.exe`をダウンロードして実行してください。
+
+現在のインストーラーはコード署名されていません。Windows SmartScreenが表示された場合は、配布元とファイル名を確認してから実行してください。DOSBox本体とDOSゲームは同梱していないため、DOSゲーム連携を使う場合はユーザー自身で用意します。
+
 ## 主な機能
 
 - 青とシアンを基調にしたMS-DOS風UI
@@ -110,8 +116,10 @@ npm run desktop:build
 NSISインストーラーを生成する場合は、次のコマンドを使用します。
 
 ```powershell
-npm run tauri -- build
+npm run desktop:installer
 ```
+
+`v1.0.0`のように、`package.json`のバージョンと一致するタグをGitHubへpushすると、GitHub ActionsがWindows用インストーラーをビルドし、GitHub Releaseへ自動公開します。
 
 `npm run dev`と`npm run desktop:dev`は1420番ポートを共有します。同時には起動しないでください。
 
@@ -550,7 +558,7 @@ v1.0.0では、シェル自動処理、仮想ファイル操作、9つの内蔵�
 
 - 入力履歴、現在位置、ゲーム途中状態の再起動後の保存
 - 外部Webプログラムの取込・更新・削除と実行ホスト、標準プログラムのWebパッケージ化
-- 配布用インストーラーの署名と公開
+- 配布用インストーラーのコード署名
 - macOS・Linux版の実機検証
 
 ネイティブ連携はメイン画面のDOSゲーム管理と全画面操作に限定し、汎用シェルやファイル操作APIを公開しません。DOSBoxの実行引数はRustで構築し、DOS側ではゲームのコピーをCドライブにマウントした後にsecure modeを有効にします。コマンド出力はReactのテキストとして描画し、HTMLとして解釈しません。

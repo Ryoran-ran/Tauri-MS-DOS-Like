@@ -18,6 +18,8 @@
 
 PRのWindowsビルドジョブにもRustテストを追加しました。ネイティブ検証は専用WebView2プロファイルと`test-results/`内のDOS管理データを使い、既存RetroDOSデータを変更しません。外部Webゲームのフレームから有効なゲーム登録リクエストを送っても登録されず、親DOM・保存領域・外部通信の制限も維持されることを確認しています。WebView2がフレームIPCの応答を返さない場合も、検証が無限待機しないようにしました。
 
+`v1.0.0`形式のタグをpushすると、GitHub Actionsがバージョン一致を確認し、単体テストとRustテストの後にWindows x64用NSISインストーラーをGitHub Releaseへ公開します。ローカルでは`npm run desktop:installer`で同じ形式を生成できます。コード署名は未対応です。
+
 生成先は`src-tauri/target/release/retrodos.exe`です。
 
 ## v0.5追記（2026年10月10日）
