@@ -14,7 +14,7 @@ describe('command execution', () => {
     expect((await executeCommand('HELP CHDIR', context())).output.join('\n')).toContain('CD [パス]');
   });
   it('executes basic commands and aliases', async () => {
-    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 0.5.0']);
+    expect((await executeCommand('VER', context())).output).toEqual(['RetroDOS Version 1.0.0']);
     expect((await executeCommand('echo "こんにちは 世界"', context())).output).toEqual(['こんにちは 世界']);
     expect((await executeCommand('ECHO', context())).output).toEqual(['']);
     expect((await executeCommand('clear', context())).clearTerminal).toBe(true);

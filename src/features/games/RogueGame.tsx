@@ -24,7 +24,7 @@ export function RogueGame({ active, onExit }: GameProps) {
       <div className="rogue-hud"><span>HP {'#'.repeat(game.hp)}{'.'.repeat(5 - game.hp)}</span><span>KILL {game.kills}</span><span>TURN {game.turns}</span></div>
       <div ref={boardRef} data-primary-input="true" className="rogue-board" tabIndex={0} aria-label="ASCII地下迷宮" style={{ '--board-cols': game.width } as CSSProperties}>{game.tiles.flatMap((row, y) => row.map((tile, x) => { const char = game.player.x === x && game.player.y === y ? '@' : at(game.enemies, x, y) ? 'E' : at(game.treasures, x, y) ? '$' : at(game.potions, x, y) ? '!' : game.exit.x === x && game.exit.y === y ? '>' : tile; return <span key={`${x}-${y}`} className={`rogue-${char === '#' ? 'wall' : char === '@' ? 'player' : char === 'E' ? 'enemy' : char === '$' ? 'treasure' : char === '!' ? 'potion' : char === '>' ? 'exit' : 'floor'}`}>{char}</span>; }))}{game.status !== 'playing' && <div className="board-overlay"><strong>{game.status === 'won' ? 'DUNGEON CLEAR' : 'YOU DIED'}</strong><span>R でもう一度</span></div>}</div>
       <p className="rogue-message" role="status">{game.message}</p><div className="arcade-actions"><button className="button secondary" onClick={reset}><RotateCcw size={14} />新しい迷宮</button></div>
-      <p className="game-footer-note"><kbd>↑↓←→</kbd> / WASD 移動 ・ <kbd>R</kbd> 新しい迷宮 ・ <kbd>Esc</kbd> 終了</p>
+      <p className="game-footer-note"><kbd>↑↓←→</kbd> / WASD 移動 ・ <kbd>R</kbd> 新しい迷宮 ・ <kbd>Ctrl+W</kbd> 終了</p>
     </div>
   </section>;
 }

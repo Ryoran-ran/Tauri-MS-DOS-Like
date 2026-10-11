@@ -6,29 +6,29 @@ async function run(page: Page, command: string) {
   await page.getByRole('tab', { name: 'ターミナル', exact: true }).click();
   await input(page).fill(command); await input(page).press('Enter');
 }
-const apps = [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']] as const;
+const apps = [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['DOSBOX', 'DOSゲーム管理'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']] as const;
 test.beforeEach(async ({ page }) => { await page.goto('/'); });
 
-test('all eight programs open from commands and the tab launcher, with keyboard switching and closing', async ({ page }) => {
+test('all nine programs open from commands and the tab launcher, with keyboard switching and closing', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   for (const [command, name] of apps) {
     await run(page, command);
     await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true');
   }
-  await expect(page.getByRole('tab')).toHaveCount(9);
+  await expect(page.getByRole('tab')).toHaveCount(10);
   for (const [, name] of apps) {
     await page.getByRole('button', { name: 'プログラムを開く', exact: true }).click();
-    await page.getByRole('menuitem', { name: new RegExp(name) }).click();
+    await page.getByRole('menuitem', { name: new RegExp(`^${name} `) }).click();
     await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('tab')).toHaveCount(9);
+  await expect(page.getByRole('tab')).toHaveCount(10);
   await page.keyboard.press('Control+Shift+Tab');
   await expect(page.getByRole('region', { name: 'システム情報', exact: true })).toBeVisible();
   await page.keyboard.press('Control+Tab');
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+w');
   await expect(input(page)).toBeFocused();
-  await expect(page.getByRole('tab')).toHaveCount(8);
+  await expect(page.getByRole('tab')).toHaveCount(9);
   await page.getByRole('button', { name: 'プログラムを開く', exact: true }).click();
   await expect(page.getByRole('menuitem').first()).toBeFocused();
   await page.keyboard.press('End'); await expect(page.getByRole('menuitem').last()).toBeFocused();
@@ -143,7 +143,7 @@ test('paint supports keyboard drawing, undo, drafts and text files; Markdown saf
   await paint.getByLabel('ASCIIテキスト').press('Control+s');
   await expect(paint.getByRole('status')).toContainText('保存しました');
   await paint.getByLabel('ASCIIテキスト').fill('UNSAVED DRAFT');
-  await page.keyboard.press('Escape'); await run(page, 'PAINT ART.ASC');
+  await page.keyboard.press('Control+w'); await run(page, 'PAINT ART.ASC');
   await expect(paint.getByRole('status')).toContainText('下書きを復元');
   await expect(paint.getByRole('grid')).toContainText('UNSAVED DRAFT');
   await run(page, 'TYPE ART.ASC'); await expect(page.getByRole('log')).toContainText('|DOS|');
@@ -259,31 +259,58 @@ test('paint uses themed confirmations for clearing, resizing and reloading, with
   expect(nativeDialogs).toEqual([]);
 });
 
-test('settings persist and change colors, font, calendar and scrolling; system info reflects the drive', async ({ page }) => {
+test('settings persist and change colors, CRT, font, calendar and scrolling; system info reflects the drive', async ({ page }) => {
   await run(page, 'SETTINGS');
   const settings = page.getByRole('region', { name: '設定', exact: true });
   await settings.getByLabel('配色', { exact: true }).selectOption('amber');
   await settings.getByLabel('文字サイズ', { exact: true }).selectOption('16');
+  await settings.getByLabel('ブラウン管風の表示', { exact: true }).selectOption('soft');
   await settings.getByLabel('カレンダーの週始まり').selectOption('1');
-  await settings.getByRole('checkbox').uncheck();
+  await settings.getByRole('checkbox', { name: 'ターミナルの新しい出力を自動スクロール' }).uncheck();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'amber');
   await run(page, 'CALENDAR'); await expect(page.locator('.calendar-weekday').first()).toHaveText('月');
   await page.reload(); await run(page, 'SETTINGS');
   await expect(settings.getByLabel('配色', { exact: true })).toHaveValue('amber');
-  await expect(settings.getByRole('checkbox')).not.toBeChecked();
+  await expect(settings.getByLabel('ブラウン管風の表示', { exact: true })).toHaveValue('soft');
+  await expect(settings.getByRole('checkbox', { name: 'ターミナルの新しい出力を自動スクロール' })).not.toBeChecked();
   await run(page, 'HELP');
   await expect(page.getByRole('log')).toHaveCSS('font-size', '16px');
   await expect(page.getByRole('button', { name: '新しい出力', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '新しい出力', exact: true }).click();
   await expect.poll(() => page.getByRole('log').evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+  await page.screenshot({ path: 'test-results/crt-amber-soft.png' });
   await run(page, 'ECHO information-test > INFO.TXT'); await run(page, 'SYSINFO');
   const system = page.getByRole('region', { name: 'システム情報', exact: true });
-  await expect(system).toContainText('Version 0.5.0');
+  await expect(system).toContainText('Version 1.0.0');
   await expect(system.locator('.system-metrics').first()).toContainText('bytes');
-  await expect(system).toContainText('47');
+  await expect(system).toContainText('51');
+  await page.getByRole('tab', { name: '設定', exact: true }).click();
+  await settings.getByLabel('ブラウン管風の表示', { exact: true }).selectOption('strong');
+  await settings.getByLabel('配色', { exact: true }).selectOption('dos');
+  await settings.getByLabel('文字サイズ', { exact: true }).selectOption('13');
+  await run(page, 'CLS');
+  await run(page, 'VER');
+  await run(page, 'ECHO ブラウン管の表示を確認しています。');
+  await page.screenshot({ path: 'test-results/crt-dos-strong.png' });
+  await page.getByRole('tab', { name: '設定', exact: true }).click();
+  await settings.getByLabel('配色', { exact: true }).selectOption('green');
+  await settings.getByLabel('文字サイズ', { exact: true }).selectOption('16');
+  await page.screenshot({ path: 'test-results/crt-settings-green.png' });
+  await run(page, 'HELP');
+  await input(page).pressSequentially('ECHO CRT keyboard check');
+  await input(page).press('Enter');
+  await expect(page.getByRole('log')).toContainText('CRT keyboard check');
+  await page.screenshot({ path: 'test-results/crt-green-strong.png' });
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.locator('.sidebar-toggle').click();
+  await expect(input(page)).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+  await page.screenshot({ path: 'test-results/crt-mobile.png' });
+  await page.setViewportSize({ width: 1180, height: 780 });
   await page.getByRole('tab', { name: '設定', exact: true }).click();
   await settings.getByRole('button', { name: '設定を初期値に戻す' }).click();
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dos');
+  await expect(settings.getByLabel('ブラウン管風の表示', { exact: true })).toHaveValue('off');
 });
 
 test('app windows and launcher remain usable on a narrow screen', async ({ page }) => {
@@ -291,7 +318,7 @@ test('app windows and launcher remain usable on a narrow screen', async ({ page 
   await page.locator('.sidebar-toggle').click();
   for (const [, name] of apps) {
     await page.getByRole('button', { name: 'プログラムを開く', exact: true }).click();
-    await page.getByRole('menuitem', { name: new RegExp(name) }).click();
+    await page.getByRole('menuitem', { name: new RegExp(`^${name} `) }).click();
     const window = page.getByRole('region', { name, exact: true });
     await expect(window).toBeVisible();
     await expect(window.locator('.builtin-titlebar button')).toBeInViewport();

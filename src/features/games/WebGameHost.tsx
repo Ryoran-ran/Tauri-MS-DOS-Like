@@ -35,7 +35,7 @@ export function buildSandboxScript(manifest: WebGamePluginManifest, run: number)
         exit: () => send('exit')
       });
       Object.defineProperty(window, 'RetroDOSGame', { value: api, configurable: false, writable: false });
-      window.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); api.exit(); } }, true);
+      window.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w') { event.preventDefault(); api.exit(); } }, true);
       window.addEventListener('error', event => send('error', { message: String(event.message || 'ゲーム内でエラーが発生しました。').slice(0, 300) }));
       window.addEventListener('message', event => {
         const message = event.data;
@@ -125,7 +125,7 @@ export function WebGameHost({ active, onExit, manifest }: Props) {
   useEffect(() => {
     if (!active) return;
     const forward = (phase: 'keydown' | 'keyup') => (event: KeyboardEvent) => {
-      if (document.activeElement !== frameRef.current || event.key === 'Escape' || event.key === 'Tab') return;
+      if (document.activeElement !== frameRef.current || event.key === 'Tab' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w')) return;
       event.preventDefault();
       frameRef.current?.contentWindow?.postMessage({
         channel: 'retrodos.host', gameId: manifest.id, run, type: 'key', phase,
@@ -152,7 +152,7 @@ export function WebGameHost({ active, onExit, manifest }: Props) {
       <div className={`web-game-frame ${manifest.display.scale}`} style={frameStyle}>
         {frameUrl && <iframe ref={frameRef} key={frameUrl} src={frameUrl} title={`${manifest.name} ゲーム画面`} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={focusGame} />}
       </div>
-      <footer><span>{manifest.description}</span><span><kbd>Esc</kbd> 終了</span></footer>
+      <footer><span>{manifest.description}</span><span><kbd>Ctrl+W</kbd> 終了</span></footer>
     </div>
   </section>;
 }

@@ -28,7 +28,7 @@ try {
   await commandInput.fill('PROGRAMS'); await commandInput.press('Enter');
   await page.getByRole('region', { name: 'プログラム一覧画面' }).waitFor();
   await page.screenshot({ path: fileURLToPath(new URL('programs.png', outputDirectory)), fullPage: true });
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+w');
   await commandInput.fill('TODO'); await commandInput.press('Enter');
   await page.getByLabel('タスク名', { exact: true }).fill('RetroDOS v0.5を試す');
   await page.getByRole('button', { name: '追加', exact: true }).click();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -23,11 +23,23 @@ if (!port) {
 }
 const endpoint = `http://127.0.0.1:${port}`;
 const webviewProfile = resolve(tmpdir(), `retrodos-webview2-smoke-${process.pid}-${Date.now()}`);
+const nativeFixture = fileURLToPath(new URL(`../test-results/native-dos-${process.pid}-${Date.now()}/`, import.meta.url));
+const nativeData = resolve(nativeFixture, 'managed');
+const nativeSource = resolve(nativeFixture, '元のゲーム');
+await mkdir(nativeSource, { recursive: true });
+// A self-authored DOS COM program: create SAVE.DAT, write a marker, close, exit.
+const code = [0xb8, 0x00, 0x3c, 0x31, 0xc9, 0xba, 0, 0, 0xcd, 0x21, 0x89, 0xc3, 0xb8, 0x00, 0x40, 0xb9, 0, 0, 0xba, 0, 0, 0xcd, 0x21, 0xb8, 0x00, 0x3e, 0xcd, 0x21, 0xb8, 0x00, 0x4c, 0xcd, 0x21];
+const filename = Buffer.from('SAVE.DAT\0'); const marker = Buffer.from('DOSBOX-SAVE-OK');
+code[6] = (0x100 + code.length) & 255; code[7] = (0x100 + code.length) >> 8;
+code[16] = marker.length; code[19] = (0x100 + code.length + filename.length) & 255; code[20] = (0x100 + code.length + filename.length) >> 8;
+await writeFile(resolve(nativeSource, 'TEST.COM'), Buffer.concat([Buffer.from(code), filename, marker]));
+await writeFile(resolve(nativeSource, 'SAVE.DAT'), 'original-save');
 const app = spawn(executable, [], {
   windowsHide: true,
   stdio: 'ignore',
   env: {
     ...process.env,
+    RETRODOS_DATA_DIR: nativeData,
     WEBVIEW2_USER_DATA_FOLDER: webviewProfile,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,
   },
@@ -62,7 +74,7 @@ try {
   assert(/^https?:\/\/tauri\.localhost(?:\/|$)/.test(page.url()) || page.url().startsWith('tauri://localhost'), `Expected embedded production assets, got ${page.url()}`);
   await expect(page).toHaveTitle('RetroDOS');
   await expect(page.locator('.environment-label')).toContainText('DESKTOP');
-  await expect(log).toContainText('RetroDOS Version 0.5.0');
+  await expect(log).toContainText('RetroDOS Version 1.0.0');
   await input.fill('GAMEPROMPT'); await input.press('Enter');
   await expect(log).toContainText('ゲーム作成の相談用プロンプトをクリップボードにコピーしました');
   const consultationPrompt = execFileSync('powershell.exe', ['-NoProfile', '-Command', '[Console]::OutputEncoding = [Text.UTF8Encoding]::new(); Get-Clipboard -Raw'], { encoding: 'utf8', windowsHide: true });
@@ -141,7 +153,7 @@ try {
   await guessInput.evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(guessInput).toBeFocused();
-  await guessInput.press('Escape');
+  await guessInput.press('Control+w');
   await expect(input).toBeFocused();
   for (const [command, label] of [['SNAKE', 'SNAKE盤面'], ['MINES', '地雷原'], ['BLOCKS', '落ちものパズル盤面'], ['ADVENTURE', '磁気カードを取る'], ['ROGUE', 'ASCII地下迷宮']]) {
     await input.fill(command); await input.press('Enter');
@@ -150,13 +162,13 @@ try {
     if (command === 'MINES') await page.keyboard.press('Enter');
     if (command === 'BLOCKS') await page.keyboard.press('Space');
     if (command === 'ROGUE') { await page.keyboard.press('ArrowRight'); await expect(page.locator('.rogue-hud')).toContainText('TURN 1'); }
-    await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+    await page.keyboard.press('Control+w'); await expect(input).toBeFocused();
   }
   await input.fill('GAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON'); await input.press('Enter');
   await expect(log).toContainText('CAVE — HELLO CAVE');
   await input.fill('RUN CAVE'); await input.press('Enter');
   await expect(page.getByRole('region', { name: 'HELLO CAVE テキストアドベンチャー' })).toBeVisible();
-  await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+  await page.keyboard.press('Control+w'); await expect(input).toBeFocused();
   await input.fill('GAMEIMPORT C:\\GAMES\\PIXEL.RGAME.JSON'); await input.press('Enter');
   await expect(log).toContainText('PIXEL — PIXEL CATCH');
   await input.fill('RUN PIXEL'); await input.press('Enter');
@@ -188,6 +200,16 @@ try {
     catch (error) { return String(error); }
   });
   assert.match(nativePermissionError, /not allowed|denied|forbidden/i);
+  const framePermissionError = await webBoard.evaluate(async source => {
+    // Some WebView2 versions drop iframe IPC without delivering a rejection callback.
+    const attempt = window.__TAURI_INTERNALS__.invoke('dosbox_request', { request: { action: 'register', source,
+      config: { name: 'FRAME TEST', code: 'DOS_FRAME', executable: 'TEST.COM', args: [], cycles: 'auto', memory: 16, sound: false, fullscreen: false, autoBackup: false } } })
+      .then(() => 'unexpected native access', error => String(error));
+    return Promise.race([attempt, new Promise(resolve => setTimeout(() => resolve('iframe IPC unavailable'), 2000))]);
+  }, nativeSource);
+  assert.match(framePermissionError, /not allowed|denied|forbidden|IPC unavailable/i, 'Imported game frames must not access native DOS files.');
+  const frameSideEffects = await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('dosbox_request', { request: { action: 'status' } }));
+  assert.equal(frameSideEffects.state.games.length, 0, 'Iframe native requests must have no filesystem effects.');
   await webBoard.press('ArrowRight');
   await webBoard.press('ArrowRight');
   await expect(webGame.getByRole('status')).toContainText('MISSION COMPLETE');
@@ -200,7 +222,7 @@ try {
   await expect(webFrame).not.toHaveAttribute('src', previousFrameUrl);
   await expect(webBoard).toBeFocused();
   await expect(page.frameLocator('iframe[title="PIXEL CATCH ゲーム画面"]').getByText('ARROW KEYS: MOVE @ TO *')).toBeVisible();
-  await webBoard.press('Escape');
+  await webBoard.press('Control+w');
   await expect(input).toBeFocused();
   await page.reload();
   await expect(input).toBeVisible();
@@ -208,9 +230,9 @@ try {
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').achievements?.some(item => item.id === 'first-star') ?? false)).toBe(true);
   await input.fill('RUN PIXEL'); await input.press('Enter');
   await expect(webBoard).toBeFocused();
-  await webBoard.press('Escape');
+  await webBoard.press('Control+w');
   await expect(input).toBeFocused();
-  for (const [command, name] of [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC "2+3*4"', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']]) {
+  for (const [command, name] of [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC "2+3*4"', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['DOSBOX', 'DOSゲーム管理'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']]) {
     await input.fill(command); await input.press('Enter');
     const program = page.getByRole('region', { name, exact: true });
     await expect(program).toBeVisible();
@@ -227,27 +249,92 @@ try {
       await expect(program).toBeVisible();
     }
     if (name === 'システム情報') await expect(program.locator('.system-metrics')).toContainText('bytes');
-    await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+    await page.keyboard.press('Control+w'); await expect(input).toBeFocused();
   }
   await page.getByRole('button', { name: 'プログラムを開く', exact: true }).click();
   await page.getByRole('menuitem', { name: /ToDoリスト/ }).click();
   await expect(page.getByRole('region', { name: 'ToDoリスト', exact: true })).toBeVisible();
   await expect(page.getByLabel('タスク名', { exact: true })).toBeFocused();
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+w');
   await expect(input).toBeFocused();
   await input.fill('PROGRAMS'); await input.press('Enter');
   const programs = page.getByRole('region', { name: 'プログラム一覧画面' });
-  await expect(programs.getByRole('article')).toHaveCount(17);
+  await expect(programs.getByRole('article')).toHaveCount(18);
   await programs.getByRole('group', { name: 'プログラムの分類' }).getByRole('button', { name: /^ゲーム/ }).click();
   await expect(programs.getByRole('article')).toHaveCount(8);
   await gameSelector.fill('CALC'); await gameSelector.press('Enter');
   await expect(page.getByRole('region', { name: '電卓', exact: true })).toBeVisible();
   await expect(page.getByLabel('計算式', { exact: true })).toBeFocused();
+  await page.keyboard.press('Control+w');
+  await input.fill('DOSBOX'); await input.press('Enter');
+  const manager = page.getByRole('region', { name: 'DOSゲーム管理', exact: true });
+  await expect(manager.getByLabel('DOSBoxの実行ファイル')).toBeFocused();
+  await manager.getByLabel('ゲーム専用フォルダー').fill(nativeSource);
+  await manager.getByLabel('ゲーム名', { exact: true }).fill('DOS NATIVE TEST');
+  await manager.getByLabel('起動コード').fill('DOS_TEST');
+  await manager.getByLabel('起動ファイル').fill('TEST.COM');
+  await manager.getByRole('button', { name: 'ゲームを登録', exact: true }).click();
+  await expect(manager.getByRole('button', { name: 'ゲームを起動', exact: true })).toBeEnabled();
+  const nativeStatus = () => page.evaluate(() => window.__TAURI_INTERNALS__.invoke('dosbox_request', { request: { action: 'status' } }));
+  let status = await nativeStatus();
+  const nativeGame = status.state.games[0]; const managedFolder = resolve(nativeData, nativeGame.id, 'game');
+  assert.equal(await readFile(resolve(managedFolder, 'SAVE.DAT'), 'utf8'), 'original-save');
+  await manager.getByRole('button', { name: 'バックアップを作成', exact: true }).click();
+  await expect(manager.getByRole('heading', { name: 'セーブデータのバックアップ (1/30)' })).toBeVisible();
+  await writeFile(resolve(managedFolder, 'SAVE.DAT'), 'changed-save'); await writeFile(resolve(managedFolder, 'NEW.DAT'), 'new-file');
+  await manager.getByRole('button', { name: '復元', exact: true }).first().click();
+  await expect(page.getByRole('dialog', { name: 'バックアップを復元' }).getByRole('button', { name: 'キャンセル', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape'); assert.equal(await readFile(resolve(managedFolder, 'SAVE.DAT'), 'utf8'), 'changed-save');
+  await manager.getByRole('button', { name: '復元', exact: true }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: '復元する', exact: true }).click();
+  await expect(manager.getByRole('heading', { name: 'セーブデータのバックアップ (2/30)' })).toBeVisible();
+  assert.equal(await readFile(resolve(managedFolder, 'SAVE.DAT'), 'utf8'), 'original-save');
+  await assert.rejects(readFile(resolve(managedFolder, 'NEW.DAT')));
+  await manager.getByLabel('CPU速度', { exact: true }).fill('3000');
+  await manager.getByRole('checkbox', { name: 'ゲーム音声', exact: true }).uncheck();
+  await manager.getByRole('button', { name: '起動設定を保存', exact: true }).click();
+  await expect(manager.getByRole('status')).toContainText('保存しました');
+  if (process.env.RETRODOS_DOSBOX_EXECUTABLE) {
+    await manager.getByLabel('DOSBoxの実行ファイル').fill(process.env.RETRODOS_DOSBOX_EXECUTABLE);
+    await manager.getByRole('button', { name: '本体の設定を保存', exact: true }).click();
+    await expect(manager.getByRole('status')).toContainText('保存しました');
+    await expect(manager.getByRole('button', { name: '本体の設定を保存', exact: true })).toBeFocused();
+    await page.keyboard.press('Control+w'); await input.fill('DOSRUN DOS_TEST'); await input.press('Enter');
+    await expect(page.locator('[role="log"]')).toContainText('DOSBoxでゲームを起動しました');
+    await expect.poll(async () => (await nativeStatus()).state.running, { timeout: 30_000 }).toEqual([]);
+    assert.equal(await readFile(resolve(managedFolder, 'SAVE.DAT'), 'utf8'), 'DOSBOX-SAVE-OK');
+    assert.equal(await readFile(resolve(nativeSource, 'SAVE.DAT'), 'utf8'), 'original-save');
+    console.log('Real DOSBox: COM execution and save output verified in the managed Japanese-path fixture.');
+    await input.fill('GAMES'); await input.press('Enter');
+    await expect(programs.getByRole('article', { name: /DOS_TEST DOS NATIVE TEST/ })).toBeVisible();
+    await gameSelector.fill('DOS_TEST'); await gameSelector.press('Enter');
+    await expect(manager).toBeVisible();
+    await expect.poll(async () => (await nativeStatus()).state.running, { timeout: 30_000 }).toEqual([]);
+    await page.getByRole('button', { name: 'プログラムを開く', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: /^DOS NATIVE TEST / })).toBeVisible();
+    await page.getByRole('menuitem', { name: /^DOS NATIVE TEST / }).click();
+    await expect.poll(async () => (await nativeStatus()).state.running, { timeout: 30_000 }).toEqual([]);
+  }
+  await page.reload(); await input.fill('DOSBOX'); await input.press('Enter');
+  await manager.getByRole('button', { name: /DOS NATIVE TEST/ }).click();
+  await expect(manager.getByLabel('CPU速度', { exact: true })).toHaveValue('3000');
+  await page.getByRole('button', { name: '全画面表示', exact: true }).click();
+  await expect(page.getByRole('button', { name: '全画面を解除', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: '全画面表示', exact: true })).toBeVisible();
+  await expect(manager).toBeVisible();
+  await page.keyboard.press('F11'); await expect(page.getByRole('button', { name: '全画面を解除', exact: true })).toBeVisible();
+  await page.keyboard.press('F11'); await expect(page.getByRole('button', { name: '全画面表示', exact: true })).toBeVisible();
+  await page.screenshot({ path: fileURLToPath(new URL('../test-results/desktop-dos-manager.png', import.meta.url)) });
+  await manager.getByRole('button', { name: '登録を削除', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '登録を削除する', exact: true }).click();
+  await expect(manager).toContainText('ゲームはまだ登録されていません');
+  assert.equal(await readFile(resolve(nativeSource, 'SAVE.DAT'), 'utf8'), 'original-save');
+  await page.keyboard.press('Control+w');
   assert.deepEqual(errors, []);
   await mkdir(fileURLToPath(new URL('../docs/screenshots/', import.meta.url)), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../docs/screenshots/desktop.png', import.meta.url)) });
-  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, consultation clipboard, IME VER/CLS, shell, BAT, Vim line/search/options, 6 built-in games, v1/v2 plugin hosts, sandbox isolation, keyboard play, score/achievements, restart/persistence, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
+  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, clipboard, IME, shell/BAT/Vim, 6 games, plugins/sandbox, scores, 9 apps, native DOS import/settings/backups/restore/remove, fullscreen, library and keyboard.`);
 } catch (error) {
   if (browser) {
     const page = browser.contexts()[0]?.pages().find(candidate => !candidate.url().startsWith('devtools:'));

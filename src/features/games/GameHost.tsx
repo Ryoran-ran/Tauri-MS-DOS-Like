@@ -1,22 +1,9 @@
-import { useEffect } from 'react';
 import { gameComponents } from './registry';
 import { findInstalledGamePlugin } from './gamePlugin';
 import { PluginAdventure } from './PluginAdventure';
 import { WebGameHost } from './WebGameHost';
 
 export function GameHost({ id, active, onExit }: { id: string; active: boolean; onExit: () => void }) {
-  useEffect(() => {
-    if (!active) return;
-    const exitWithEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.isComposing) return;
-      event.preventDefault();
-      onExit();
-    };
-
-    window.addEventListener('keydown', exitWithEscape);
-    return () => window.removeEventListener('keydown', exitWithEscape);
-  }, [active, onExit]);
-
   const plugin = id.startsWith('plugin:') ? findInstalledGamePlugin(id.slice(7)) : undefined;
   if (plugin?.manifestVersion === 2) return <WebGameHost key={id} active={active} onExit={onExit} manifest={plugin} />;
   if (plugin) return <PluginAdventure key={id} active={active} onExit={onExit} manifest={plugin} external />;

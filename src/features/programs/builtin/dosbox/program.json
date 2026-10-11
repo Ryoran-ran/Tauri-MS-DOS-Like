@@ -1,0 +1,7 @@
+{
+  "format": "retrodos.program", "manifestVersion": 1,
+  "id": "retrodos.dosbox", "code": "DOSBOX", "name": "DOSゲーム管理",
+  "description": "所有するDOSゲームの登録・起動設定・セーブ管理",
+  "version": "1.0.0", "category": "tools", "icon": "gamepad", "order": 80,
+  "aliases": [], "argument": { "kind": "none" }, "entry": { "runtime": "builtin", "module": "dosbox" }
+}

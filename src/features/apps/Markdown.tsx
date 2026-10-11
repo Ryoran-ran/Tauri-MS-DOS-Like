@@ -4,7 +4,7 @@ import { AppMessage, AppWindow } from './AppWindow';
 import type { AppProps } from './AppWindow';
 import type { FileSystem } from '../filesystem/types';
 
-export const markdownExample = '# RetroDOS v0.5\n\nコマンドから始まる、小さなデスクトップ。\n\n## 内蔵アプリ\n\n- **FILES**: ファイルを整理\n- **TODO**: 次にすることを記録\n- **CALC**: 計算\n- **PAINT**: 文字で描画\n- **GAMES**: 6本のゲームと実績\n\n> タブの + メニューからもプログラムを起動できます。\n\n```dos\nVIM NOTE.MD\nMARKDOWN NOTE.MD\nSNAKE\n```\n\n| キー | 操作 |\n| --- | --- |\n| Ctrl+Tab | タブ切り替え |\n| Esc | アプリ・ゲームを閉じる |\n\n日本語、**太字**、*斜体*、`コード`、リスト、表を表示できます。';
+export const markdownExample = '# RetroDOS v0.5\n\nコマンドから始まる、小さなデスクトップ。\n\n## 内蔵アプリ\n\n- **FILES**: ファイルを整理\n- **TODO**: 次にすることを記録\n- **CALC**: 計算\n- **PAINT**: 文字で描画\n- **GAMES**: 6本のゲームと実績\n\n> タブの + メニューからもプログラムを起動できます。\n\n```dos\nVIM NOTE.MD\nMARKDOWN NOTE.MD\nSNAKE\n```\n\n| キー | 操作 |\n| --- | --- |\n| Ctrl+Tab | タブ切り替え |\n| Ctrl+W | アプリ・ゲームを閉じる |\n\n日本語、**太字**、*斜体*、`コード`、リスト、表を表示できます。';
 
 function inline(text: string): ReactNode[] {
   const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^\s)]+\))/g;

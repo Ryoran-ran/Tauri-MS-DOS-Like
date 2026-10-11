@@ -1,7 +1,7 @@
 {
   "name": "retrodos",
   "private": true,
-  "version": "0.5.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
@@ -14,10 +14,12 @@
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build --no-bundle",
+    "desktop:installer": "tauri build",
     "test:desktop": "node scripts/verify-desktop.mjs",
     "capture:preview": "node scripts/capture-preview.mjs"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.3",
     "lucide-react": "^1.54.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

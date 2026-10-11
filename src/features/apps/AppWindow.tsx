@@ -18,13 +18,11 @@ export function AppWindow({ id, active, onClose, children, footer }: AppProps & 
     });
     return () => cancelAnimationFrame(frame);
   }, [active]);
-  return <section ref={sectionRef} className={`builtin-view app-${id}`} hidden={!active} aria-label={app.name} onKeyDown={event => {
-    if (event.key === 'Escape' && !event.nativeEvent.isComposing && !event.defaultPrevented) { event.preventDefault(); onClose(); }
-  }}>
+  return <section ref={sectionRef} className={`builtin-view app-${id}`} hidden={!active} aria-label={app.name}>
     <div className="builtin-window">
       <header className="builtin-titlebar"><span><Icon size={16} />{app.name}</span><code>{app.command}</code><button aria-label={`${app.name}を閉じる`} onClick={onClose}><X size={14} /></button></header>
       <div className="builtin-body">{children}</div>
-      <footer className="builtin-footer"><span>{footer ?? app.description}</span><span><kbd>Esc</kbd> 閉じる · <kbd>Ctrl+Tab</kbd> 切替</span></footer>
+      <footer className="builtin-footer"><span>{footer ?? app.description}</span><span><kbd>Ctrl+W</kbd> 閉じる · <kbd>Ctrl+Tab</kbd> 切替</span></footer>
     </div>
   </section>;
 }

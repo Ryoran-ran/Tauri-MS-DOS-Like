@@ -1,0 +1,71 @@
+/* Static glass and phosphor effects keep typing and game controls responsive. */
+.app-shell:is([data-crt=soft], [data-crt=strong]) {
+  --screen-scanline: .12;
+  --screen-vignette: .22;
+  --screen-glow: .65px;
+  --screen-edge: 20px;
+  text-shadow: 0 0 var(--screen-glow) currentColor;
+}
+
+.app-shell[data-crt=strong] {
+  --screen-scanline: .22;
+  --screen-vignette: .4;
+  --screen-glow: 1.7px;
+  --screen-edge: 32px;
+  --screen-black: #090c10;
+  --screen-phosphor: 190 224 255;
+  text-shadow:
+    0 0 var(--screen-glow) currentColor,
+    0 0 5px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.app-shell[data-crt=strong][data-theme=amber] {
+  --screen-black: #100c06;
+  --screen-phosphor: 255 202 133;
+}
+
+.app-shell[data-crt=strong][data-theme=green] {
+  --screen-black: #061009;
+  --screen-phosphor: 162 255 188;
+}
+
+.app-shell[data-crt=strong] :is(.terminal-view, .terminal-panel, .terminal-output, .terminal-input-form, .terminal-input-form input, .settings-preview) {
+  background-color: var(--screen-black);
+}
+
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border-radius: min(var(--screen-edge), 3vmin);
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / var(--screen-vignette)) 100%),
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / var(--screen-scanline)) 0 1px, transparent 1px 3px),
+    linear-gradient(125deg, #ffffff07, transparent 35%);
+  box-shadow: inset 0 0 var(--screen-edge) rgb(0 0 0 / var(--screen-vignette));
+}
+
+.app-shell[data-crt=strong] .crt-overlay {
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / var(--screen-vignette)) 100%),
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / var(--screen-scanline)) 0 1px, rgb(var(--screen-phosphor) / .055) 1px 2px, transparent 2px 4px),
+    linear-gradient(125deg, #ffffff07, transparent 35%);
+}
+
+/* A small, static tile avoids generating new noise on every frame. */
+.app-shell[data-crt=strong] .crt-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: url('./crt-grain.svg') repeat;
+  background-size: 128px 128px;
+  opacity: .075;
+}
+
+@media print {
+  .crt-overlay { display: none; }
+  .app-shell:is([data-crt=soft], [data-crt=strong]) { text-shadow: none; }
+}
