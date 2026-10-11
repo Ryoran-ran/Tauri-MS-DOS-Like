@@ -1,0 +1,15 @@
+{
+  "format": "retrodos.program",
+  "manifestVersion": 1,
+  "id": "retrodos.blocks",
+  "code": "BLOCKS",
+  "name": "BLOCKS",
+  "description": "ブロックを積み、横一列を揃えて消す落ちものパズル",
+  "version": "0.5.0",
+  "category": "games",
+  "icon": "blocks",
+  "order": 40,
+  "aliases": ["TETRIS"],
+  "argument": { "kind": "none" },
+  "entry": { "runtime": "builtin", "module": "blocks" }
+}

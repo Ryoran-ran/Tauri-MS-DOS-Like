@@ -3,6 +3,7 @@ import type { ActiveView } from '../../types/workspace';
 import type { ShellSession } from './shellState';
 import type { BuiltinAppId } from '../apps/catalog';
 import type { ProgramFilter } from '../programs/types';
+import type { GamePluginManifest } from '../games/gamePlugin';
 
 export type CommandCategory = 'basic' | 'files' | 'shell' | 'programs' | 'system';
 export interface ArgumentDefinition {
@@ -18,6 +19,8 @@ export interface CommandResult {
   currentDirectory?: string;
   activeView?: ActiveView;
   activeGame?: string;
+  gamePluginInstall?: GamePluginManifest;
+  clipboardText?: string;
   activeDocument?: string;
   programFilter?: ProgramFilter;
   appLaunch?: { id: BuiltinAppId; path?: string; expression?: string };

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -12,15 +13,24 @@ const profile = process.argv.includes('--debug') ? 'debug' : 'release';
 const executable = process.env.RETRODOS_EXECUTABLE
   ? resolve(process.env.RETRODOS_EXECUTABLE)
   : fileURLToPath(new URL(`../src-tauri/target/${profile}/retrodos.exe`, import.meta.url));
-const server = createServer();
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const port = server.address().port;
-await new Promise(resolve => server.close(resolve));
+const requestedPort = Number.parseInt(process.env.RETRODOS_CDP_PORT ?? '', 10);
+let port = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : 0;
+if (!port) {
+  const server = createServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  port = server.address().port;
+  await new Promise(resolve => server.close(resolve));
+}
 const endpoint = `http://127.0.0.1:${port}`;
+const webviewProfile = resolve(tmpdir(), `retrodos-webview2-smoke-${process.pid}-${Date.now()}`);
 const app = spawn(executable, [], {
   windowsHide: true,
   stdio: 'ignore',
-  env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1` },
+  env: {
+    ...process.env,
+    WEBVIEW2_USER_DATA_FOLDER: webviewProfile,
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,
+  },
 });
 let spawnError;
 app.on('error', error => { spawnError = error; });
@@ -52,7 +62,12 @@ try {
   assert(/^https?:\/\/tauri\.localhost(?:\/|$)/.test(page.url()) || page.url().startsWith('tauri://localhost'), `Expected embedded production assets, got ${page.url()}`);
   await expect(page).toHaveTitle('RetroDOS');
   await expect(page.locator('.environment-label')).toContainText('DESKTOP');
-  await expect(log).toContainText('RetroDOS Version 0.4.0');
+  await expect(log).toContainText('RetroDOS Version 0.5.0');
+  await input.fill('GAMEPROMPT'); await input.press('Enter');
+  await expect(log).toContainText('ゲーム作成の相談用プロンプトをクリップボードにコピーしました');
+  const consultationPrompt = execFileSync('powershell.exe', ['-NoProfile', '-Command', '[Console]::OutputEncoding = [Text.UTF8Encoding]::new(); Get-Clipboard -Raw'], { encoding: 'utf8', windowsHide: true });
+  assert(consultationPrompt.includes('最初からコードやJSONを出力しないでください'));
+  assert(consultationPrompt.includes('UIデザイン') && consultationPrompt.includes('v2 Webゲーム'));
   const cdp = await context.newCDPSession(page);
   await input.fill('ve');
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Process', code: 'KeyR', windowsVirtualKeyCode: 229 });
@@ -80,6 +95,7 @@ try {
   await input.fill('ECHO ECHO BAT-OK > C:\\SMOKE.BAT'); await input.press('Enter');
   await input.fill('C:\\SMOKE.BAT'); await input.press('Enter');
   await expect(log).toContainText('BAT-OK');
+  await input.fill('DEL C:\\SMOKE-VIM.TXT'); await input.press('Enter');
   await input.fill('VIM C:\\SMOKE-VIM.TXT'); await input.press('Enter');
   const vim = page.getByRole('region', { name: 'VIMメモ帳' });
   const vimEditor = page.getByRole('textbox', { name: 'Vimエディタ本文' });
@@ -87,11 +103,17 @@ try {
   await vimEditor.press('i');
   await vimEditor.fill('alpha\nbeta alpha\ngamma');
   await vimEditor.press('Escape');
-  await vimEditor.press('Home'); await vimEditor.press('k');
+  await vimEditor.evaluate(element => {
+    const editor = element;
+    const secondLine = editor.value.indexOf('\n') + 1;
+    editor.focus(); editor.setSelectionRange(secondLine, secondLine);
+  });
   await vimEditor.press('y'); await vimEditor.press('y'); await vimEditor.press('p');
   await expect(vimEditor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await expect.poll(() => vimEditor.evaluate(element => element.selectionStart)).toBe(17);
   await vimEditor.press('u'); await expect(vimEditor).toHaveValue('alpha\nbeta alpha\ngamma');
   await vimEditor.press('Control+r'); await expect(vimEditor).toHaveValue('alpha\nbeta alpha\nbeta alpha\ngamma');
+  await expect.poll(() => vimEditor.evaluate(element => element.selectionStart)).toBe(17);
   await vimEditor.press('/');
   const vimSearch = page.getByRole('textbox', { name: 'Vim検索' });
   await vimSearch.fill('alpha'); await vimSearch.press('Enter');
@@ -112,7 +134,7 @@ try {
   await gameSelector.evaluate(element => element.blur());
   await page.keyboard.press('Space');
   await expect(gameSelector).toBeFocused();
-  await gameSelector.press('ArrowDown');
+  await gameSelector.fill('GUESS');
   await gameSelector.press('Enter');
   const guessInput = page.getByRole('spinbutton', { name: '予想する数字' });
   await expect(guessInput).toBeVisible();
@@ -120,6 +142,73 @@ try {
   await page.keyboard.press('Space');
   await expect(guessInput).toBeFocused();
   await guessInput.press('Escape');
+  await expect(input).toBeFocused();
+  for (const [command, label] of [['SNAKE', 'SNAKE盤面'], ['MINES', '地雷原'], ['BLOCKS', '落ちものパズル盤面'], ['ADVENTURE', '磁気カードを取る'], ['ROGUE', 'ASCII地下迷宮']]) {
+    await input.fill(command); await input.press('Enter');
+    const primary = command === 'ADVENTURE' ? page.getByRole('button', { name: new RegExp(label) }) : page.getByLabel(label);
+    await expect(primary).toBeFocused();
+    if (command === 'MINES') await page.keyboard.press('Enter');
+    if (command === 'BLOCKS') await page.keyboard.press('Space');
+    if (command === 'ROGUE') { await page.keyboard.press('ArrowRight'); await expect(page.locator('.rogue-hud')).toContainText('TURN 1'); }
+    await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+  }
+  await input.fill('GAMEIMPORT C:\\GAMES\\EXAMPLE.RGAME.JSON'); await input.press('Enter');
+  await expect(log).toContainText('CAVE — HELLO CAVE');
+  await input.fill('RUN CAVE'); await input.press('Enter');
+  await expect(page.getByRole('region', { name: 'HELLO CAVE テキストアドベンチャー' })).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(input).toBeFocused();
+  await input.fill('GAMEIMPORT C:\\GAMES\\PIXEL.RGAME.JSON'); await input.press('Enter');
+  await expect(log).toContainText('PIXEL — PIXEL CATCH');
+  await input.fill('RUN PIXEL'); await input.press('Enter');
+  const webGame = page.getByRole('region', { name: 'PIXEL CATCH ゲームプラグイン' });
+  await expect(webGame).toBeVisible();
+  const webFrame = page.locator('iframe[title="PIXEL CATCH ゲーム画面"]');
+  await expect(webFrame).toHaveAttribute('sandbox', 'allow-scripts');
+  const webBoard = page.frameLocator('iframe[title="PIXEL CATCH ゲーム画面"]').getByLabel('PIXEL CATCH盤面');
+  await expect(webBoard).toBeFocused();
+  const isolation = await webBoard.evaluate(async () => {
+    let parentAccessBlocked = false;
+    try { void parent.document; } catch (error) { parentAccessBlocked = error.name === 'SecurityError'; }
+    let networkBlocked = false;
+    try { await fetch('http://127.0.0.1:9339/retrodos-sandbox-test'); } catch { networkBlocked = true; }
+    let storageBlocked = false;
+    try { localStorage.getItem('retrodos.games.v1'); } catch (error) { storageBlocked = error.name === 'SecurityError'; }
+    return {
+      parentAccessBlocked,
+      networkBlocked,
+      storageBlocked,
+      csp: document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content,
+    };
+  });
+  assert(isolation.parentAccessBlocked && isolation.networkBlocked && isolation.storageBlocked, JSON.stringify(isolation));
+  assert(isolation.csp.includes("connect-src 'none'"));
+  // WebView2 injects Tauri's helper into frames. Permissions, not helper presence, deny native access.
+  const nativePermissionError = await page.evaluate(async () => {
+    try { await window.__TAURI_INTERNALS__.invoke('plugin:window|get_all_windows'); return ''; }
+    catch (error) { return String(error); }
+  });
+  assert.match(nativePermissionError, /not allowed|denied|forbidden/i);
+  await webBoard.press('ArrowRight');
+  await webBoard.press('ArrowRight');
+  await expect(webGame.getByRole('status')).toContainText('MISSION COMPLETE');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').scores?.['plugin.pixel-catch']?.highScore ?? 0)).toBe(100);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').achievements?.some(item => item.id === 'first-star') ?? false)).toBe(true);
+  await mkdir(fileURLToPath(new URL('../test-results/', import.meta.url)), { recursive: true });
+  await page.screenshot({ path: fileURLToPath(new URL('../test-results/desktop-web-game.png', import.meta.url)) });
+  const previousFrameUrl = await webFrame.getAttribute('src');
+  await webGame.getByRole('button', { name: 'もう一度', exact: true }).click();
+  await expect(webFrame).not.toHaveAttribute('src', previousFrameUrl);
+  await expect(webBoard).toBeFocused();
+  await expect(page.frameLocator('iframe[title="PIXEL CATCH ゲーム画面"]').getByText('ARROW KEYS: MOVE @ TO *')).toBeVisible();
+  await webBoard.press('Escape');
+  await expect(input).toBeFocused();
+  await page.reload();
+  await expect(input).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').scores?.['plugin.pixel-catch']?.highScore ?? 0)).toBe(100);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('retrodos.games.v1') ?? '{}').achievements?.some(item => item.id === 'first-star') ?? false)).toBe(true);
+  await input.fill('RUN PIXEL'); await input.press('Enter');
+  await expect(webBoard).toBeFocused();
+  await webBoard.press('Escape');
   await expect(input).toBeFocused();
   for (const [command, name] of [['FILES', 'ファイルマネージャー'], ['TODO', 'ToDoリスト'], ['CALENDAR', 'カレンダー'], ['CALC "2+3*4"', '電卓'], ['PAINT', 'ASCIIペイント'], ['MARKDOWN', 'Markdownビューア'], ['SYSINFO', 'システム情報'], ['SETTINGS', '設定']]) {
     await input.fill(command); await input.press('Enter');
@@ -148,9 +237,9 @@ try {
   await expect(input).toBeFocused();
   await input.fill('PROGRAMS'); await input.press('Enter');
   const programs = page.getByRole('region', { name: 'プログラム一覧画面' });
-  await expect(programs.getByRole('article')).toHaveCount(10);
+  await expect(programs.getByRole('article')).toHaveCount(17);
   await programs.getByRole('group', { name: 'プログラムの分類' }).getByRole('button', { name: /^ゲーム/ }).click();
-  await expect(programs.getByRole('article')).toHaveCount(1);
+  await expect(programs.getByRole('article')).toHaveCount(8);
   await gameSelector.fill('CALC'); await gameSelector.press('Enter');
   await expect(page.getByRole('region', { name: '電卓', exact: true })).toBeVisible();
   await expect(page.getByLabel('計算式', { exact: true })).toBeFocused();
@@ -158,7 +247,7 @@ try {
   assert.deepEqual(errors, []);
   await mkdir(fileURLToPath(new URL('../docs/screenshots/', import.meta.url)), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../docs/screenshots/desktop.png', import.meta.url)) });
-  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, IME VER/CLS, shell, BAT, Vim line/search/options, games, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
+  console.log(`Desktop smoke test passed (${profile}): ${page.url()}, consultation clipboard, IME VER/CLS, shell, BAT, Vim line/search/options, 6 built-in games, v1/v2 plugin hosts, sandbox isolation, keyboard play, score/achievements, restart/persistence, 8 apps, shared program library, categories, RUN, paint confirmation, tab launcher, Escape exit.`);
 } catch (error) {
   if (browser) {
     const page = browser.contexts()[0]?.pages().find(candidate => !candidate.url().startsWith('devtools:'));

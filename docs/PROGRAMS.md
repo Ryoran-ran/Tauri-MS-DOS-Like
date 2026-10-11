@@ -4,7 +4,7 @@
 
 ## 現在実装している範囲
 
-- 標準10プログラムを`src/features/programs/builtin/<module>/program.json`から登録。
+- 標準15プログラムを`src/features/programs/builtin/<module>/program.json`から登録。
 - 起動メニュー、分類、番号選択、コード選択、RUN、別名、ウィンドウ名は共通カタログを使用。
 - `PROGRAMS`（別名`APPS`）は全件、`GAMES`はゲームに絞った同じ一覧を開く。
 - `RUN CALC "(12 + 8) * 3"`、`RUN VIM NOTE.TXT`、`RUN GUESS`など、共通の起動処理から実行。
@@ -42,7 +42,7 @@
 | `name` / `description` | 表示名と説明。各1〜500文字 |
 | `version` | プログラム本体のバージョン。`1.0.0`など。形式バージョンとは独立 |
 | `category` | `tools` / `games` / `system` |
-| `icon` | `folder`、`todo`、`calendar`、`calculator`、`paint`、`markdown`、`editor`、`target`、`monitor`、`settings`。未知の名前は汎用アイコン |
+| `icon` | `folder`、`todo`、`calendar`、`calculator`、`paint`、`markdown`、`editor`、`target`、`snake`、`bomb`、`blocks`、`adventure`、`rogue`、`monitor`、`settings`。未知の名前は汎用アイコン |
 | `order` | 分類内での表示順。小さい整数が先。同値はコード順 |
 | `aliases` | 追加の入力コード。主コードと同じ文字規則。重複禁止、最大20個 |
 | `argument.kind` | `none` / `directory` / `document` / `drawing` / `markdown` / `expression` |
@@ -84,3 +84,5 @@ hello/
 4. 標準プログラムを同じAPIとWebパッケージ形式へ順次移行。
 
 外部コードにRetroDOS本体のDOMや保存領域への直接アクセスを与えず、必要な操作はホストAPIを通す設計とします。パッケージ形式、実行ホスト、APIを一緒に確定してから取り込み機能を公開します。
+
+ゲームは、単一ファイルの`retrodos.game`形式で先行して取り込み・実行できます。v1は任意コードを含まない分岐型、v2はHTML・CSS・JavaScriptを隔離フレームで動かすWebゲームです。汎用プログラムの複数ファイルパッケージとは保存形式とホストAPIが異なります。仕様は[ゲームプラグインガイド](GAME-PLUGINS.md)を参照してください。

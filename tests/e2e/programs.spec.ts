@@ -11,13 +11,13 @@ test('one program library categorizes tools, games and system and resets through
   const library = page.getByRole('region', { name: 'プログラム一覧画面' });
   const selector = library.getByRole('textbox', { name: 'プログラムコードまたは番号' });
   const filters = library.getByRole('group', { name: 'プログラムの分類' });
-  await expect(selector).toBeFocused(); await expect(library.getByRole('article')).toHaveCount(10);
+  await expect(selector).toBeFocused(); await expect(library.getByRole('article')).toHaveCount(15);
   await filters.getByRole('button', { name: /^ツール/ }).click(); await expect(library.getByRole('article')).toHaveCount(7);
-  await filters.getByRole('button', { name: /^ゲーム/ }).click(); await expect(library.getByRole('article')).toHaveCount(1);
+  await filters.getByRole('button', { name: /^ゲーム/ }).click(); await expect(library.getByRole('article')).toHaveCount(6);
   await filters.getByRole('button', { name: /^システム/ }).click(); await expect(library.getByRole('article')).toHaveCount(2);
   await run(page, 'GAMES'); await expect(selector).toBeFocused();
   await expect(filters.getByRole('button', { name: /^ゲーム/ })).toHaveAttribute('aria-pressed', 'true');
-  await run(page, 'APPS'); await expect(library.getByRole('article')).toHaveCount(10);
+  await run(page, 'APPS'); await expect(library.getByRole('article')).toHaveCount(15);
   await expect(page.getByRole('tab', { name: 'プログラム一覧', exact: true })).toHaveCount(1);
   await selector.press('ArrowUp'); await expect(library.locator('.program-card.selected')).toContainText('SETTINGS');
   await expect(selector).toBeInViewport();
@@ -42,7 +42,7 @@ test('shared menu includes VIM and GUESS, and library works on a narrow CRT scre
   await open.click();
   const menu = page.getByRole('menu', { name: 'プログラム', exact: true });
   await expect(menu.getByRole('group', { name: 'ツール' }).getByRole('menuitem')).toHaveCount(7);
-  await expect(menu.getByRole('group', { name: 'ゲーム' }).getByRole('menuitem')).toHaveCount(1);
+  await expect(menu.getByRole('group', { name: 'ゲーム' }).getByRole('menuitem')).toHaveCount(6);
   await expect(menu.getByRole('group', { name: 'システム' }).getByRole('menuitem')).toHaveCount(2);
   await menu.getByRole('menuitem', { name: /VIM/ }).click();
   await expect(page.getByRole('textbox', { name: 'Vimエディタ本文' })).toBeFocused();

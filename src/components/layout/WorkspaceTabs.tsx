@@ -6,6 +6,8 @@ import { findBuiltinApp } from '../../features/apps/catalog';
 import { filterPrograms } from '../../features/programs/catalog';
 import { getProgramIcon } from '../../features/programs/icons';
 import { programCategories } from '../../features/programs/types';
+import { findInstalledGamePlugin } from '../../features/games/gamePlugin';
+import { useGamePlugins } from '../../features/games/useGamePlugins';
 
 interface Props {
   activeView: ActiveView;
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath, activeGame, onNavigate, onClose, onLaunchCommand }: Props) {
+  const gamePlugins = useGamePlugins();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [launcherOpen, setLauncherOpen] = useState(false);
   const launcherRef = useRef<HTMLDivElement>(null);
@@ -91,6 +94,7 @@ export function WorkspaceTabs({ activeView, openViews, activeDocument, pagerPath
         {programCategories.map(category => <div key={category.id} role="group" aria-label={category.label}>
           <p className="program-menu-category">{category.label}</p>
           {filterPrograms(category.id).map(program => { const Icon = getProgramIcon(program.icon); return <button key={program.id} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`RUN ${program.code}`); }}><Icon size={16} /><span>{program.name}<small>{program.description}</small></span><code>{program.code}</code></button>; })}
+          {category.id === 'games' && gamePlugins.map(plugin => <button key={`plugin-${plugin.id}`} role="menuitem" onClick={() => { setLauncherOpen(false); onLaunchCommand(`RUN ${plugin.code}`); }}><Gamepad2 size={16} /><span>{plugin.name}<small>{plugin.description}</small></span><code>{plugin.code}</code></button>)}
         </div>)}
         <button role="menuitem" className="program-menu-library" onClick={() => { setLauncherOpen(false); onLaunchCommand('PROGRAMS'); }}><Library size={16} /><span>プログラム一覧<small>コード・番号・矢印で選択</small></span></button>
       </div>}
@@ -113,7 +117,8 @@ function getTab(view: ActiveView, activeDocument: string, pagerPath: string | un
   }
   if (view === 'import') return { label: 'ドライブ取込', title: '仮想ドライブ取り込み', icon: FileInput };
   if (view === 'program-library') return { label: 'プログラム一覧', title: 'プログラム一覧', icon: Library };
-  return { label: activeGame?.toUpperCase() ?? 'ゲーム', title: '起動中のゲーム', icon: Gamepad2 };
+  const plugin = activeGame?.startsWith('plugin:') ? findInstalledGamePlugin(activeGame.slice(7)) : undefined;
+  return { label: plugin?.name ?? activeGame?.toUpperCase() ?? 'ゲーム', title: plugin ? `${plugin.name} - ゲームプラグイン` : '起動中のゲーム', icon: Gamepad2 };
 }
 
 function baseName(path: string): string {

@@ -4,7 +4,11 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
   workers: 1,
-  reporter: 'list',
+  forbidOnly: Boolean(process.env.CI),
+  globalTimeout: process.env.CI ? 600_000 : undefined,
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }]]
+    : 'list',
   use: {
     baseURL: 'http://127.0.0.1:1420',
     channel: 'msedge',

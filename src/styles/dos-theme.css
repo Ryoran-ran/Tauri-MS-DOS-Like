@@ -106,10 +106,12 @@ kbd {
 .sidebar-list { padding: 2px 7px 7px; }
 .search-summary { padding: 4px 6px 8px; color: #55ffff; }
 .command-group + .command-group { margin-top: 6px; }
-.command-group h3 { margin: 3px 0; padding: 3px 6px; color: #000; background: #00aaaa; font: 700 10px var(--mono); }
-.command-group h3 span { color: #000; }
-.command-item { gap: 12px; padding: 6px 8px; color: #fff; border-radius: 0; }
-.command-item code { width: 48px; color: #55ffff; font-size: 12px; }
+.command-group h3 { margin: 3px 0; color: #000; background: #00aaaa; font: 700 10px var(--mono); }
+.command-group-toggle { padding: 3px 6px; color: #000; }
+.command-group-toggle:hover { color: #000; background: #55ffff; }
+.command-group-count { color: #000; }
+.command-item { gap: 8px 10px; padding: 6px 8px; color: #fff; border-radius: 0; }
+.command-item code { color: #55ffff; font-size: 12px; }
 .command-item > span { color: #fff; font: 11px var(--mono); }
 .command-item:hover, .command-item.selected { color: #000; background: #55ffff; border-color: #fff; }
 .command-item:hover code, .command-item.selected code,
@@ -122,10 +124,11 @@ kbd {
 .sidebar-footer { padding: 7px 11px; color: #000; background: #c0c0c0; border-top: 2px solid #fff; }
 .sidebar-footer:hover { color: #fff; background: #0000aa; }
 
-.command-details { max-height: 49%; color: #000; background: #c0c0c0; border-top: 3px double #fff; }
+.command-details { color: #000; background: #c0c0c0; }
 .command-detail-content { padding: 10px 12px 0; }
 .command-details-actions { padding: 9px 12px 11px; }
-.detail-heading .eyebrow { color: #000080; }
+.detail-back-button { padding: 4px 6px; color: #fff; background: #000080; }
+.detail-back-button:hover { color: #000; background: #55ffff; }
 .command-details h3 { color: #000080; font: 700 18px var(--mono); }
 .command-details h3 span { color: #000; font-family: var(--mono); }
 .command-details p { color: #000; line-height: 1.65; }
@@ -259,6 +262,7 @@ kbd {
 .library-key-help { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 7px; color: #aaa; font-size: 9px; }
 .library-key-help span { display: flex; align-items: center; gap: 5px; }
 .library-selector-error { margin-top: 7px; padding: 3px 6px; color: #fff; background: #aa0000; font-size: 10px; }
+.library-selector-notice { margin-top: 7px; padding: 3px 6px; color: #000; background: #55ff55; font-size: 10px; }
 .library-section-title { margin: 10px 0 9px; padding-bottom: 5px; border-bottom: 1px solid #55ffff; }
 .library-section-title h2 { color: #ffff55; font-weight: 700; }
 .library-section-title span { color: #fff; }

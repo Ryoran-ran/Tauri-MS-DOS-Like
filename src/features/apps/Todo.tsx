@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppMessage, AppWindow } from './AppWindow';
 import type { AppProps } from './AppWindow';
 import { localDate, usePersonalData } from './personalData';
+import { DosDatePicker, isValidDateValue } from './DosDatePicker';
 
 export function Todo({ active, onClose }: AppProps) {
   const { todos, setTodos, storageError } = usePersonalData();
@@ -20,13 +21,14 @@ export function Todo({ active, onClose }: AppProps) {
     <form className="todo-form app-card" onSubmit={event => {
       event.preventDefault();
       if (!title.trim()) { setError('タスク名を入力してください。'); return; }
+      if (due && !isValidDateValue(due)) { setError('期限はYYYY-MM-DD形式の正しい日付で入力してください。'); return; }
       if (!editing && todos.length >= 1000) { setError('タスクは最大1000件です。'); return; }
       if (editing) setTodos(items => items.map(item => item.id === editing ? { ...item, title: title.trim(), due, priority } : item));
       else setTodos(items => [...items, { id: crypto.randomUUID(), title: title.trim(), due, priority, done: false }]);
       setMessage(editing ? 'タスクを更新しました。' : 'タスクを追加しました。'); setError(''); reset();
     }}>
       <label className="app-field todo-title">タスク<input data-primary-input="true" aria-label="タスク名" value={title} onChange={event => setTitle(event.target.value)} maxLength={300} placeholder="次にすること…" /></label>
-      <label className="app-field">期限<input type="date" aria-label="タスクの期限" value={due} onChange={event => setDue(event.target.value)} /></label>
+      <DosDatePicker label="期限" inputLabel="タスクの期限" value={due} onChange={value => { setDue(value); setError(''); }} />
       <label className="app-field">優先度<select aria-label="タスクの優先度" value={priority} onChange={event => setPriority(event.target.value as typeof priority)}><option value="normal">通常</option><option value="high">高い</option></select></label>
       <button className="app-button primary" type="submit">{editing ? '更新' : '追加'}</button>{editing && <button className="app-button" type="button" onClick={reset}>キャンセル</button>}
     </form>

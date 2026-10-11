@@ -9,6 +9,8 @@ describe('game library keyboard selection', () => {
     ['GUESS', 0],
     ['guess', 0],
     [' guess ', 0],
+    ['2', 1],
+    ['SNAKE', 1],
   ])('resolves %s to a game', (query, expected) => {
     expect(resolveGameSelection(query, gameCatalog, 0)).toBe(expected);
   });
@@ -17,7 +19,7 @@ describe('game library keyboard selection', () => {
     expect(resolveGameSelection('', gameCatalog, 0)).toBe(0);
   });
 
-  it.each(['0', '2', 'UNKNOWN'])('rejects an unknown selector: %s', query => {
+  it.each(['0', '7', 'UNKNOWN'])('rejects an unknown selector: %s', query => {
     expect(resolveGameSelection(query, gameCatalog, 0)).toBeNull();
   });
 
