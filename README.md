@@ -452,6 +452,21 @@ npm run test:desktop
 
 検証件数と実行結果は[実装・検証記録](docs/IMPLEMENTATION.md)に記載しています。
 
+### プルリクエストの自動チェック
+
+[GitHub ActionsのCI設定](.github/workflows/ci.yml)により、PRの作成・更新・再オープン・レビュー可能への変更と、`main`へのpush時に自動で検証します。GitHubの「Actions」から手動実行もできます。Node.js 22とWindows環境を使用します。
+
+| チェック名 | 実行内容 |
+| --- | --- |
+| `Web tests` | `npm ci`、ユニットテスト、型検査・フロントエンドのビルド、Edgeでの画面操作テスト |
+| `Windows desktop build` | `Web tests`成功後にTauriのWindows releaseビルド |
+
+画面操作テストのHTMLレポートと、失敗時のスクリーンショット・トレースは、Actionsの実行画面の「Artifacts」に`playwright-results`として7日間保存します。PRを更新すると、同じPRの古い実行をキャンセルします。CIでは`test.only`を禁止し、画面操作テスト全体を10分で打ち切ります。
+
+テスト成功をマージ条件にする場合は、リポジトリの「Settings → Rules → Rulesets」で`main`を対象に「Require status checks to pass」を有効にし、`Web tests`と`Windows desktop build`を指定してください。候補にはCIを一度実行した後に表示されます。
+
+実際のWebView2を操作する`npm run test:desktop`は、Windowsのローカル環境で`npm run desktop:build`の後に実行します。
+
 ## プロジェクト構成
 
 ```text
